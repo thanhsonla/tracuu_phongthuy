@@ -227,7 +227,7 @@ const formatTietKhiTime = (timeStr) => {
 };
 
 // --- Tái sử dụng Tracker Result Card ---
-const TrackerResultCard = ({ dateObj, data, searchTargetStar, searchDirection, projectContext }) => {
+const TrackerResultCard = ({ dateObj, data, searchTargetStar, searchDirection, projectContext, currentTime }) => {
   const hk = data.hiepKy;
   const relations = data.chiRelations;
   const grid = flyStar(data.daily, true);
@@ -267,6 +267,15 @@ const TrackerResultCard = ({ dateObj, data, searchTargetStar, searchDirection, p
                   {data.dayTianShen.name} <br/>
                   <span className={`text-[8.5px] mt-0.5 block ${data.dayTianShen.type === 'Hoàng Đạo' ? 'text-amber-600' : 'text-slate-400'}`}>({data.dayTianShen.type})</span>
                </div>
+             )}
+             
+             {/* Digital Clock */}
+             {currentTime && (
+                <div className="mt-2 w-full text-center py-2 px-1 rounded-xl bg-gradient-to-r from-slate-800 to-slate-900 shadow-md border border-slate-700">
+                  <span className="font-mono text-xl md:text-2xl font-black text-amber-400 tracking-widest leading-none" style={{ fontFamily: '"Share Tech Mono", monospace' }}>
+                     {currentTime.toLocaleTimeString('vi-VN', {hour12: false})}
+                  </span>
+                </div>
              )}
           </div>
 
@@ -458,7 +467,7 @@ const TodayWidget = ({ projectContext }) => {
 
   return (
     <div className="animate-fade-in animate-slide-in-right w-full mb-4">
-       <TrackerResultCard dateObj={now} data={data} projectContext={projectContext} />
+       <TrackerResultCard dateObj={now} currentTime={now} data={data} projectContext={projectContext} />
     </div>
   );
 };

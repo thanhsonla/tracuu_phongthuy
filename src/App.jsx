@@ -232,8 +232,9 @@ export default function App() {
          </div>
       </main>
 
-      <footer className="text-center mt-10 pt-10 pb-6 opacity-70 border-t border-slate-200">
-        <p className="text-slate-400 font-bold tracking-wide">Developed by Nguyễn Trung Thành (Integrated by AI)</p>
+      <footer className="text-center mt-10 pt-10 pb-6 border-t border-slate-200">
+        <p className="text-slate-500 font-bold tracking-wide">Tạo bởi Nguyễn Trung Thành</p>
+        <p className="text-slate-500 font-medium text-sm mt-1">Nhu cầu tư vấn phong thủy tại <a href="https://phongthuyhongphuc.com/" target="_blank" rel="noreferrer" className="text-indigo-600 hover:text-indigo-800 font-bold">https://phongthuyhongphuc.com/</a></p>
       </footer>
     </div>
   );
