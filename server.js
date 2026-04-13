@@ -40,17 +40,28 @@ const docsDir = path.resolve(__dirname, 'src/data/docs');
 
 if (isCloud) {
   console.log('☁️ KHỞI ĐỘNG CHẾ ĐỘ MÂY HÓA (CLOUD - SUPABASE POSTGRES)');
-  supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-} else {
-  console.log('💻 KHỞI ĐỘNG CHẾ ĐỘ CỤC BỘ (LOCAL - SQLITE)');
-  
-  // Dùng require động để tránh vỡ Serverless
-  let Database;
   try {
-     Database = customRequire(sqlModuleName);
-  } catch(err) {
-     console.error("Cảnh báo: Khởi động Local thất bại do thiếu better-sqlite3.", err);
+     supabase = createClient(SUPABASE_URL.trim(), SUPABASE_KEY.trim());
+  } catch(e) {
+     console.error("LỖI KHI KẾT NỐI SUPABASE. Kích hoạt mây hóa thất bại:", e);
+     // Đè về local để không sập server
+     supabase = null; 
   }
+} 
+
+if (!supabase) {
+  if (process.env.VERCEL) {
+     console.error("LỖI CHÍNH TỬ: Đang ở trên Vercel nhưng KHÔNG có kết nối Supabase. Hệ thống sẽ tê liệt.");
+  } else {
+    console.log('💻 KHỞI ĐỘNG CHẾ ĐỘ CỤC BỘ (LOCAL - SQLITE)');
+    
+    // Dùng require động để tránh vỡ Serverless
+    let Database;
+    try {
+       Database = customRequire(sqlModuleName);
+    } catch(err) {
+       console.error("Cảnh báo: Khởi động Local thất bại do thiếu better-sqlite3.", err);
+    }
 
   if (Database) {
     const dbPath = path.resolve(__dirname, 'hkpt.db');
@@ -90,6 +101,7 @@ if (isCloud) {
       updatedAt TEXT DEFAULT (datetime('now','localtime'))
     )
   `);
+    }
   }
 }
 
