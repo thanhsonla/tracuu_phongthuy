@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Lock, Save, Database, Shield, Check, X, ShieldAlert, FileText, Settings, Compass, Ruler, Library, PlusCircle } from 'lucide-react';
+import { User, Lock, Save, Database, Shield, Check, X, ShieldAlert, FileText, Settings, Compass, Ruler, Library, PlusCircle, Eye, EyeOff } from 'lucide-react';
 
 export default function AccountScreen({ currentUser, projects, onOpenProject }) {
   const isAdmin = currentUser?.role === 'ADMIN';
@@ -55,6 +55,10 @@ function PersonalInfo({ currentUser, projects, onOpenProject }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [msg, setMsg] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(false);
+  
+  const [showOld, setShowOld] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConf, setShowConf] = useState(false);
 
   const myProjects = projects.filter(p => currentUser.role === 'ADMIN' ? p.owner_id === currentUser.id : true);
   // Nếu là ADMIN, dự án trả về là tất cả dự án -> Lọc lấy owner_id === id. Nếu USER thì tự động chỉ có dự án của user đó.
@@ -111,18 +115,33 @@ function PersonalInfo({ currentUser, projects, onOpenProject }) {
              )}
              <div>
                 <label className="text-xs font-bold text-slate-500">MẬT KHẨU CŨ</label>
-                <input type="password" required value={oldPassword} onChange={e=>setOldPassword(e.target.value)}
-                  className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 font-medium focus:border-indigo-500 outline-none" />
+                <div className="relative mt-1">
+                  <input type={showOld ? "text" : "password"} required value={oldPassword} onChange={e=>setOldPassword(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 font-medium focus:border-indigo-500 outline-none pr-12" />
+                  <button type="button" onClick={() => setShowOld(!showOld)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    {showOld ? <EyeOff size={16}/> : <Eye size={16}/>}
+                  </button>
+                </div>
              </div>
              <div>
                 <label className="text-xs font-bold text-slate-500">MẬT KHẨU MỚI</label>
-                <input type="password" required minLength={6} value={newPassword} onChange={e=>setNewPassword(e.target.value)}
-                  className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 font-medium focus:border-indigo-500 outline-none" />
+                <div className="relative mt-1">
+                  <input type={showNew ? "text" : "password"} required minLength={6} value={newPassword} onChange={e=>setNewPassword(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 font-medium focus:border-indigo-500 outline-none pr-12" />
+                  <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    {showNew ? <EyeOff size={16}/> : <Eye size={16}/>}
+                  </button>
+                </div>
              </div>
              <div>
                 <label className="text-xs font-bold text-slate-500">XÁC NHẬN MẬT KHẨU MỚI</label>
-                <input type="password" required minLength={6} value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)}
-                  className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 font-medium focus:border-indigo-500 outline-none" />
+                <div className="relative mt-1">
+                  <input type={showConf ? "text" : "password"} required minLength={6} value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 font-medium focus:border-indigo-500 outline-none pr-12" />
+                  <button type="button" onClick={() => setShowConf(!showConf)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    {showConf ? <EyeOff size={16}/> : <Eye size={16}/>}
+                  </button>
+                </div>
              </div>
              <button type="submit" disabled={loading} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 transition disabled:opacity-50">
                 <Save size={16} /> LƯU THAY ĐỔI

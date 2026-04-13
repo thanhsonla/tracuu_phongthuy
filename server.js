@@ -368,17 +368,17 @@ const DB = {
 // ======================================================================
 setTimeout(async () => {
     try {
-        const existingAdmin = await DB.getUserByUsername('admin');
+        const existingAdmin = await DB.getUserByUsername('vn24h.bnb');
         if (!existingAdmin) {
             const salt = await bcrypt.genSalt(10);
-            const password_hash = await bcrypt.hash('191190', salt);
+            const password_hash = await bcrypt.hash('Love11618', salt);
             await DB.createUser({
-                username: 'admin',
+                username: 'vn24h.bnb',
                 password_hash,
                 role: 'ADMIN',
                 permissions: JSON.stringify({ "TRACKER":true, "CREATE":true, "LUBAN":true, "LIBRARY":true })
             });
-            console.log('🌟 Đã tự động tạo tài khoản: admin | Mật khẩu: 191190');
+            console.log('🌟 Đã tự động tạo tài khoản: vn24h.bnb | Mật khẩu: Love11618');
         }
     } catch(e) { console.error('Seed Admin check error:', e.message); }
 }, 2000); // Đợi 2s để Supabase DB connection ổn định nếu có

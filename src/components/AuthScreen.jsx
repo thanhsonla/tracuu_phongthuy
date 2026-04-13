@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogIn, UserPlus, AlertCircle, Compass } from 'lucide-react';
+import { LogIn, UserPlus, AlertCircle, Compass, Eye, EyeOff } from 'lucide-react';
 
 export default function AuthScreen({ onLogin }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -8,6 +8,7 @@ export default function AuthScreen({ onLogin }) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -67,9 +68,9 @@ export default function AuthScreen({ onLogin }) {
               <Compass className="text-red-500" size={36} />
             </div>
             <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-red-600 to-indigo-600 bg-clip-text text-transparent">
-              HKPT PRO
+              W2H
             </h1>
-            <p className="text-slate-500 font-medium tracking-wide text-sm mt-1">Xuan Kong App Authentication</p>
+            <p className="text-slate-500 font-medium tracking-wide text-sm mt-1">NTT App</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -107,13 +108,22 @@ export default function AuthScreen({ onLogin }) {
 
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mật khẩu</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium pr-12"
+                  placeholder="••••••••"
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             <button
