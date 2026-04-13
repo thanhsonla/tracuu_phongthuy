@@ -651,7 +651,7 @@ app.get('/api/docs/content', authenticateToken, async (req, res) => {
 
 app.post('/api/docs/create-folder', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Chỉ Admin mới có tạo thư mục thư viện' });
+    if (!req.user.permissions?.LIBRARY && req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Không có quyền thêm tài liệu' });
     const dbPath = req.body.folderPath.replace(/\\/g, '/');
     const exists = await DB.isDocumentExists(dbPath);
     if (!exists) {
@@ -673,7 +673,7 @@ app.post('/api/docs/create-folder', authenticateToken, async (req, res) => {
 
 app.post('/api/docs/save-text', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Chỉ Admin mới có sửa tài liệu thư viện' });
+    if (!req.user.permissions?.LIBRARY && req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Không có quyền thêm tài liệu' });
     const dbPath = req.body.filePath.replace(/\\/g, '/');
     const content = req.body.content;
     const size = Buffer.byteLength(content, 'utf8');
@@ -694,7 +694,7 @@ import os from 'os';
 const upload = multer({ dest: path.join(os.tmpdir(), 'uploads_temp') });
 app.post('/api/docs/upload', authenticateToken, upload.array('files'), async (req, res) => {
   try {
-    if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Chỉ Admin mới có upload tài liệu thư viện' });
+    if (!req.user.permissions?.LIBRARY && req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Không có quyền thêm tài liệu' });
     let destFolder = req.body.folder || '';
     if(Array.isArray(destFolder)) destFolder = destFolder[0];
     destFolder = destFolder.replace(/\\/g, '/');

@@ -213,7 +213,7 @@ const HuyenKhongCac = ({ currentUser }) => {
           ))}
         </div>
 
-        {isAdmin && (
+        {currentUser && (
           <div className="p-3 border-t border-slate-100 bg-slate-50 grid grid-cols-3 gap-1">
             <button onClick={() => setModalType('folder')} className="flex flex-col items-center justify-center p-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition" title="Thư mục mới"><Folder size={18}/><span className="text-xs font-bold mt-1">Thư mục</span></button>
             <button onClick={() => setModalType('upload')} className="flex flex-col items-center justify-center p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition" title="Tải file lên"><Upload size={18}/><span className="text-xs font-bold mt-1">Tải File</span></button>
@@ -232,11 +232,11 @@ const HuyenKhongCac = ({ currentUser }) => {
                  <span className="text-xs font-mono text-slate-400 bg-slate-200/50 px-2 py-0.5 rounded-md mt-1 inline-block">{selectedFile.path}</span>
               </div>
               <div className="flex gap-2">
+                 {currentUser && (
+                   <button onClick={() => { setTextContent(fileContent); setModalType('edit'); }} className="px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg text-sm font-bold transition flex items-center gap-1"><FileText size={14}/> Sửa</button>
+                 )}
                  {isAdmin && (
-                   <>
-                     <button onClick={() => { setTextContent(fileContent); setModalType('edit'); }} className="px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg text-sm font-bold transition flex items-center gap-1"><FileText size={14}/> Sửa</button>
-                     <button onClick={() => handleDeleteItem(selectedFile.path, false)} className="px-3 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-sm font-bold transition flex items-center gap-1"><Trash2 size={14}/> Xóa</button>
-                   </>
+                   <button onClick={() => handleDeleteItem(selectedFile.path, false)} className="px-3 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-sm font-bold transition flex items-center gap-1"><Trash2 size={14}/> Xóa</button>
                  )}
               </div>
             </div>
@@ -400,7 +400,7 @@ export const DatabaseView = ({ projects, setProjects, setCurrentProject, setMain
               <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4 text-emerald-600 group-hover:bg-emerald-100 transition-colors">
                 <Home size={24} />
               </div>
-              {isAdmin && (
+              {(isAdmin || (currentUser && p.owner_id === currentUser.id)) && (
                 <button onClick={(e) => handleDelete(p.id, e)}
                   title="Xóa dự án"
                   className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100 cursor-pointer z-10">

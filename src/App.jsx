@@ -107,17 +107,13 @@ export default function App() {
   if (currentUser) {
      if (currentUser.role === 'ADMIN') navItems = navItemsRaw;
      else navItems = navItemsRaw.filter(item => currentUser.permissions?.[item.id]);
+  } else {
+     // Guest: Mặc định được xem TRACKER và LUBAN
+     navItems = navItemsRaw.filter(item => ['TRACKER', 'LUBAN'].includes(item.id));
   }
 
   if (isCheckingAuth) {
     return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white"><span className="animate-pulse">Loading...</span></div>;
-  }
-
-  if (!currentUser) {
-    return <AuthScreen onLogin={(data) => {
-      localStorage.setItem('hkpt_token', data.token);
-      setCurrentUser(data.user);
-    }}/>;
   }
 
   const handleLogout = () => {
@@ -162,16 +158,22 @@ export default function App() {
                </nav>
 
                {/* USER INFO & LOGOUT */}
-               <div className="flex items-center gap-3 bg-slate-100 rounded-xl px-4 py-2 border border-slate-200 ml-auto md:ml-0">
-                  <div onClick={() => setCurrentView('ACCOUNT')} className="flex flex-col text-right cursor-pointer hover:bg-slate-200 px-2 rounded transition" title="Mở cài đặt tài khoản">
-                    <span className="text-sm font-bold text-slate-800 flex items-center gap-1 justify-end">{currentUser.username} <UserIcon size={14}/></span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600">{currentUser.role}</span>
-                  </div>
-                  <div className="w-px h-6 bg-slate-300 mx-1"></div>
-                  <button onClick={handleLogout} className="text-slate-500 hover:text-red-600 transition-colors" title="Đăng xuất">
-                    <LogOut size={20} />
-                  </button>
-               </div>
+               {currentUser ? (
+                 <div className="flex items-center gap-3 bg-slate-100 rounded-xl px-4 py-2 border border-slate-200 ml-auto md:ml-0">
+                    <div onClick={() => setCurrentView('ACCOUNT')} className="flex flex-col text-right cursor-pointer hover:bg-slate-200 px-2 rounded transition" title="Mở cài đặt tài khoản">
+                      <span className="text-sm font-bold text-slate-800 flex items-center gap-1 justify-end">{currentUser.username} <UserIcon size={14}/></span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600">{currentUser.role}</span>
+                    </div>
+                    <div className="w-px h-6 bg-slate-300 mx-1"></div>
+                    <button onClick={handleLogout} className="text-slate-500 hover:text-red-600 transition-colors" title="Đăng xuất">
+                      <LogOut size={20} />
+                    </button>
+                 </div>
+               ) : (
+                 <button onClick={() => setCurrentView('LOGIN')} className="ml-auto md:ml-0 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-md hover:shadow-lg transition">
+                    <UserIcon size={16} /> Đăng Nhập
+                 </button>
+               )}
 
             </div>
 
@@ -183,7 +185,18 @@ export default function App() {
       <main className="p-4 md:p-8">
          <div className="max-w-6xl mx-auto animate-slide-up">
            
-           {currentView === 'TRACKER' && <TimeStarTracker />}
+           {currentView === 'LOGIN' && !currentUser && (
+              <AuthScreen 
+                onClose={() => setCurrentView('TRACKER')}
+                onLogin={(data) => {
+                  localStorage.setItem('hkpt_token', data.token);
+                  setCurrentUser(data.user);
+                  setCurrentView('TRACKER'); // Đưa về bảng làm việc sau khi login
+                }}
+              />
+           )}
+           
+           {(currentView === 'TRACKER' || (!currentUser && !['TRACKER', 'LUBAN', 'LOGIN'].includes(currentView))) && <TimeStarTracker />}
            
            {currentView === 'CREATE' && (
              <CreateProject 

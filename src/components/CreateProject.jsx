@@ -116,15 +116,15 @@ const CreateProject = ({ setView, projects, setProjects, setCurrentProject, curr
                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     <div className="space-y-1.5 lg:col-span-1">
                        <label className="text-xs font-bold text-slate-500 uppercase">Họ tên Gia chủ</label>
-                       <input type="text" required value={formData.clientName} onChange={e=>setFormData({...formData, clientName: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium text-sm" placeholder="Nguyễn Văn A"/>
+                       <input type="text" required value={formData.clientName} onChange={e=>setFormData({...formData, clientName: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium text-sm text-slate-800 bg-white" placeholder="Nguyễn Văn A"/>
                     </div>
                     <div className="space-y-1.5">
                        <label className="text-xs font-bold text-slate-500 uppercase">Ngày Sinh</label>
-                       <input type="date" required value={formData.dob} onChange={e=>setFormData({...formData, dob: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium text-sm"/>
+                       <input type="date" required value={formData.dob} onChange={e=>setFormData({...formData, dob: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium text-sm text-slate-800 bg-white"/>
                     </div>
                     <div className="space-y-1.5">
                        <label className="text-xs font-bold text-slate-500 uppercase">Giới Tính</label>
-                       <select value={formData.gender} onChange={e=>setFormData({...formData, gender: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium text-sm">
+                       <select value={formData.gender} onChange={e=>setFormData({...formData, gender: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium text-sm text-slate-800 bg-white">
                           <option value="Nam">Nam</option><option value="Nữ">Nữ</option>
                        </select>
                     </div>
@@ -151,7 +151,7 @@ const CreateProject = ({ setView, projects, setProjects, setCurrentProject, curr
                        </button>
                        <div className="flex-1 space-y-1">
                           <label className="text-[10px] font-bold text-slate-400 uppercase">Vai trò</label>
-                          <select value={member.relation} onChange={e=>handleMemberChange(index, 'relation', e.target.value)} className="w-full px-2 py-1.5 rounded bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-sm">
+                          <select value={member.relation} onChange={e=>handleMemberChange(index, 'relation', e.target.value)} className="w-full px-2 py-1.5 rounded bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-sm text-slate-800">
                              <option value="Vợ/Chồng">Vợ / Chồng</option>
                              <option value="Con cái">Con cái</option>
                              <option value="Bố/Mẹ">Bố / Mẹ</option>
@@ -160,15 +160,15 @@ const CreateProject = ({ setView, projects, setProjects, setCurrentProject, curr
                        </div>
                        <div className="flex-[2] space-y-1">
                           <label className="text-[10px] font-bold text-slate-400 uppercase">Họ tên</label>
-                          <input type="text" placeholder="Họ và tên" value={member.name} onChange={e=>handleMemberChange(index, 'name', e.target.value)} className="w-full px-2 py-1.5 rounded bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-sm"/>
+                          <input type="text" placeholder="Họ và tên" value={member.name} onChange={e=>handleMemberChange(index, 'name', e.target.value)} className="w-full px-2 py-1.5 rounded bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-sm text-slate-800"/>
                        </div>
                        <div className="flex-1 space-y-1">
                           <label className="text-[10px] font-bold text-slate-400 uppercase">Ngày sinh</label>
-                          <input type="date" value={member.dob} onChange={e=>handleMemberChange(index, 'dob', e.target.value)} className="w-full px-2 py-1.5 rounded bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-sm leading-none"/>
+                          <input type="date" value={member.dob} onChange={e=>handleMemberChange(index, 'dob', e.target.value)} className="w-full px-2 py-1.5 rounded bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-sm leading-none text-slate-800"/>
                        </div>
                        <div className="flex-1 space-y-1">
                           <label className="text-[10px] font-bold text-slate-400 uppercase">Giới tính</label>
-                          <select value={member.gender} onChange={e=>handleMemberChange(index, 'gender', e.target.value)} className="w-full px-2 py-1.5 rounded bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-sm">
+                          <select value={member.gender} onChange={e=>handleMemberChange(index, 'gender', e.target.value)} className="w-full px-2 py-1.5 rounded bg-slate-50 border border-slate-200 focus:border-indigo-500 outline-none text-sm text-slate-800">
                              <option value="Nam">Nam</option><option value="Nữ">Nữ</option>
                           </select>
                        </div>
@@ -184,11 +184,11 @@ const CreateProject = ({ setView, projects, setProjects, setCurrentProject, curr
               <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr] gap-4">
                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase">Địa chỉ Công trình</label>
-                    <input type="text" value={formData.address} onChange={e=>setFormData({...formData, address: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium bg-white text-sm" placeholder="Số nhà, đường, quận/huyện..."/>
+                    <input type="text" value={formData.address} onChange={e=>setFormData({...formData, address: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium bg-white text-sm text-slate-800" placeholder="Số nhà, đường, quận/huyện..."/>
                  </div>
                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase">Năm Xây *</label>
-                    <input type="number" required value={formData.buildYear} onChange={e=>setFormData({...formData, buildYear: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium bg-white text-sm" placeholder="VD: 2024"/>
+                    <input type="number" required value={formData.buildYear} onChange={e=>setFormData({...formData, buildYear: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium bg-white text-sm text-slate-800" placeholder="VD: 2024"/>
                  </div>
                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase">Tọa độ hướng (Độ) *</label>
@@ -198,12 +198,14 @@ const CreateProject = ({ setView, projects, setProjects, setCurrentProject, curr
 
               <div className="space-y-1.5 mt-2">
                  <label className="text-xs font-bold text-slate-500 uppercase">Yêu cầu thiết kế</label>
-                 <textarea rows="2" value={formData.designReq} onChange={e=>setFormData({...formData, designReq: e.target.value})} className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium resize-none bg-white text-sm placeholder-slate-400" placeholder="VD: Cần 4 phòng ngủ, phòng thờ tầng 1..."></textarea>
+                 <textarea rows="2" value={formData.designReq} onChange={e=>setFormData({...formData, designReq: e.target.value})} className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium resize-none bg-white text-sm text-slate-800 placeholder-slate-400" placeholder="VD: Cần 4 phòng ngủ, phòng thờ tầng 1..."></textarea>
               </div>
 
               <div className="space-y-1.5">
                  <label className="text-xs font-bold text-slate-500 uppercase">Hình thế Loan Đầu & Sát khí ngoài nhà (Hệ thống sẽ tự động phân tích)</label>
-                 <textarea rows="3" value={formData.loanDau} onChange={e=>setFormData({...formData, loanDau: e.target.value})} className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium resize-none bg-white text-sm placeholder-slate-400" placeholder="VD: Trước cửa có cột điện lớn, bên phải nhà cao hơn trái, hẻm nhỏ phía sau đâm thẳng vào, gần nghĩa trang, đối diện khe hẹp 2 tòa nhà, dây điện chằng chịt trước cửa sổ..."></textarea>
+                 <textarea rows="3" value={formData.loanDau} onChange={e=>setFormData({...formData, loanDau: e.target.value})} className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium resize-none bg-white text-sm text-slate-800 placeholder-slate-400" placeholder="VD: Trước cửa có cột điện lớn, bên phải nhà cao hơn trái, hẻm nhỏ phía sau đâm thẳng vào, gần nghĩa trang, đối diện khe hẹp 2 tòa nhà, dây điện chằng chịt trước cửa sổ..."></textarea>
+                 <p className="text-[11px] text-slate-400 italic">💡 Mô tả chi tiết môi trường xung quanh nhà. Hệ thống sẽ tự động nhận diện 20 loại sát khí và đề xuất phương pháp hóa giải.</p>
+              </div>m thẳng vào, gần nghĩa trang, đối diện khe hẹp 2 tòa nhà, dây điện chằng chịt trước cửa sổ..."></textarea>
                  <p className="text-[11px] text-slate-400 italic">💡 Mô tả chi tiết môi trường xung quanh nhà. Hệ thống sẽ tự động nhận diện 20 loại sát khí và đề xuất phương pháp hóa giải.</p>
               </div>
           </div>

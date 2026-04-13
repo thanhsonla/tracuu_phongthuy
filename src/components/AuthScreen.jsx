@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { LogIn, UserPlus, AlertCircle, Compass, Eye, EyeOff } from 'lucide-react';
+import { LogIn, UserPlus, AlertCircle, Compass, Eye, EyeOff, X } from 'lucide-react';
 
-export default function AuthScreen({ onLogin }) {
+export default function AuthScreen({ onLogin, onClose }) {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -61,7 +61,12 @@ export default function AuthScreen({ onLogin }) {
       </div>
 
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative z-10">
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+        {onClose && (
+          <button type="button" onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full p-2 transition-colors z-20">
+            <X size={20} />
+          </button>
+        )}
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-8 pt-10">
           
           <div className="flex flex-col items-center mb-8">
             <div className="w-16 h-16 bg-white shadow-xl rounded-2xl flex items-center justify-center mb-4">
