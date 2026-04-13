@@ -9,6 +9,8 @@ import TurndownService from 'turndown';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import { createRequire } from 'module';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 // Đoạn này lừa Vercel Bundler để nó không cố gói better-sqlite3 C++ native code
 const customRequire = createRequire(import.meta.url);
@@ -22,6 +24,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const JWT_SECRET = process.env.JWT_SECRET || 'hkpt_super_secret_jwt_key_2026';
 
 // ===== Middleware =====
 app.use(cors());
@@ -68,6 +71,27 @@ if (!supabase) {
     dbLocal = new Database(dbPath);
     dbLocal.pragma('journal_mode = WAL');
 
+    // Khởi tạo bảng users local
+    dbLocal.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      email TEXT,
+      password_hash TEXT NOT NULL,
+      role TEXT DEFAULT 'USER',
+      permissions TEXT DEFAULT '{"TRACKER":true,"CREATE":true,"LUBAN":true,"LIBRARY":true}',
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    )
+    `);
+
+    try {
+      const uInfo = dbLocal.prepare("PRAGMA table_info(users)").all();
+      if (uInfo.length > 0 && !uInfo.find(c => c.name === 'permissions')) {
+        dbLocal.exec("ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT '{\"TRACKER\":true,\"CREATE\":true,\"LUBAN\":true,\"LIBRARY\":true}'");
+        console.log("Migrated SQLite: Added permissions to users");
+      }
+    } catch(e) { }
+
     // Khởi tạo bảng projects local
     dbLocal.exec(`
     CREATE TABLE IF NOT EXISTS projects (
@@ -84,10 +108,19 @@ if (!supabase) {
       loanDau TEXT DEFAULT '',
       details TEXT DEFAULT '{}',
       notes TEXT DEFAULT '[]',
+      owner_id TEXT DEFAULT NULL,
       createdAt TEXT DEFAULT (datetime('now','localtime')),
       updatedAt TEXT DEFAULT (datetime('now','localtime'))
     )
-  `);
+    `);
+
+    try {
+      const tableInfo = dbLocal.prepare("PRAGMA table_info(projects)").all();
+      if (!tableInfo.find(c => c.name === 'owner_id')) {
+        dbLocal.exec("ALTER TABLE projects ADD COLUMN owner_id TEXT DEFAULT NULL");
+        console.log("Migrated SQLite: Added owner_id to projects");
+      }
+    } catch(e) { }
 
   // Khởi tạo bảng documents local
   dbLocal.exec(`
@@ -142,15 +175,16 @@ const DB = {
       gender: p.gender || 'Nam',
       loanDau: p.loanDau || '',
       details: isCloud ? (p.details || {}) : JSON.stringify(p.details || {}),
-      notes: isCloud ? (p.notes || []) : JSON.stringify(p.notes || [])
+      notes: isCloud ? (p.notes || []) : JSON.stringify(p.notes || []),
+      owner_id: p.owner_id || null
     };
     
     if (isCloud) {
       const { error } = await supabase.from('projects').insert([payload]);
       if (error) throw error;
     } else {
-      const stmt = dbLocal.prepare(`INSERT INTO projects (id, projectName, clientName, address, degree, period, yearBuilt, menhQuai, birthYear, gender, loanDau, details, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-      stmt.run(payload.id, payload.projectName, payload.clientName, payload.address, payload.degree, payload.period, payload.yearBuilt, payload.menhQuai, payload.birthYear, payload.gender, payload.loanDau, payload.details, payload.notes);
+      const stmt = dbLocal.prepare(`INSERT INTO projects (id, projectName, clientName, address, degree, period, yearBuilt, menhQuai, birthYear, gender, loanDau, details, notes, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+      stmt.run(payload.id, payload.projectName, payload.clientName, payload.address, payload.degree, payload.period, payload.yearBuilt, payload.menhQuai, payload.birthYear, payload.gender, payload.loanDau, payload.details, payload.notes, payload.owner_id);
     }
   },
 
@@ -169,14 +203,20 @@ const DB = {
       details: isCloud ? (p.details || {}) : JSON.stringify(p.details || {}),
       notes: isCloud ? (p.notes || []) : JSON.stringify(p.notes || [])
     };
+    if (p.owner_id !== undefined) payload.owner_id = p.owner_id;
 
     if (isCloud) {
       payload.updatedAt = new Date().toISOString();
       const { error } = await supabase.from('projects').update(payload).eq('id', id);
       if (error) throw error;
     } else {
-      const stmt = dbLocal.prepare(`UPDATE projects SET projectName=?, clientName=?, address=?, degree=?, period=?, yearBuilt=?, menhQuai=?, birthYear=?, gender=?, loanDau=?, details=?, notes=?, updatedAt=datetime('now','localtime') WHERE id=?`);
-      stmt.run(payload.projectName, payload.clientName, payload.address, payload.degree, payload.period, payload.yearBuilt, payload.menhQuai, payload.birthYear, payload.gender, payload.loanDau, payload.details, payload.notes, id);
+      if (payload.owner_id !== undefined) {
+          const stmt = dbLocal.prepare(`UPDATE projects SET projectName=?, clientName=?, address=?, degree=?, period=?, yearBuilt=?, menhQuai=?, birthYear=?, gender=?, loanDau=?, details=?, notes=?, owner_id=?, updatedAt=datetime('now','localtime') WHERE id=?`);
+          stmt.run(payload.projectName, payload.clientName, payload.address, payload.degree, payload.period, payload.yearBuilt, payload.menhQuai, payload.birthYear, payload.gender, payload.loanDau, payload.details, payload.notes, payload.owner_id, id);
+      } else {
+          const stmt = dbLocal.prepare(`UPDATE projects SET projectName=?, clientName=?, address=?, degree=?, period=?, yearBuilt=?, menhQuai=?, birthYear=?, gender=?, loanDau=?, details=?, notes=?, updatedAt=datetime('now','localtime') WHERE id=?`);
+          stmt.run(payload.projectName, payload.clientName, payload.address, payload.degree, payload.period, payload.yearBuilt, payload.menhQuai, payload.birthYear, payload.gender, payload.loanDau, payload.details, payload.notes, id);
+      }
     }
   },
 
@@ -251,42 +291,289 @@ const DB = {
       dbLocal.prepare('DELETE FROM documents WHERE path = ?').run(dbPath);
       dbLocal.prepare('DELETE FROM documents WHERE path LIKE ?').run(`${dbPath}/%`);
     }
+  },
+
+  async getUserByUsername(username) {
+    if (isCloud) {
+      const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data || null;
+    } else {
+      return dbLocal.prepare('SELECT * FROM users WHERE username = ?').get(username) || null;
+    }
+  },
+
+  async getUserById(id) {
+    if (isCloud) {
+      const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data || null;
+    } else {
+      return dbLocal.prepare('SELECT * FROM users WHERE id = ?').get(id) || null;
+    }
+  },
+
+  async createUser(user) {
+    const payload = {
+      id: user.id || `user_${Date.now()}`,
+      username: user.username,
+      email: user.email || '',
+      password_hash: user.password_hash,
+      role: user.role || 'USER',
+      permissions: user.permissions || '{"TRACKER":true,"CREATE":true,"LUBAN":true,"LIBRARY":true}',
+      created_at: new Date().toISOString()
+    };
+    if (isCloud) {
+       const { error } = await supabase.from('users').insert([payload]);
+       if (error) throw error;
+       return payload;
+    } else {
+       const stmt = dbLocal.prepare(`INSERT INTO users (id, username, email, password_hash, role, permissions) VALUES (?, ?, ?, ?, ?, ?)`);
+       stmt.run(payload.id, payload.username, payload.email, payload.password_hash, payload.role, payload.permissions);
+       return payload;
+    }
+  },
+
+  async updateUserPermissions(id, permissions) {
+    const permStr = JSON.stringify(permissions);
+    if (isCloud) {
+       await supabase.from('users').update({ permissions: permStr }).eq('id', id);
+    } else {
+       dbLocal.prepare('UPDATE users SET permissions=? WHERE id=?').run(permStr, id);
+    }
+  },
+
+  async updatePassword(id, password_hash) {
+    if (isCloud) {
+       await supabase.from('users').update({ password_hash }).eq('id', id);
+    } else {
+       dbLocal.prepare('UPDATE users SET password_hash=? WHERE id=?').run(password_hash, id);
+    }
+  },
+
+  async getAllUsers() {
+    if (isCloud) {
+       const { data } = await supabase.from('users').select('id, username, email, role, permissions, created_at').order('created_at', { ascending: false });
+       if (data) return data.map(u => ({ ...u, permissions: typeof u.permissions==='string'?JSON.parse(u.permissions):u.permissions }));
+       return [];
+    } else {
+       const rows = dbLocal.prepare('SELECT id, username, email, role, permissions, created_at FROM users ORDER BY created_at DESC').all();
+       return rows.map(u => ({ ...u, permissions: JSON.parse(u.permissions || '{"TRACKER":true,"CREATE":true,"LUBAN":true,"LIBRARY":true}') }));
+    }
   }
 };
 
 // ======================================================================
-// API: HỒ SƠ DỰ ÁN
+// SEED DEFAULT ADMIN & PERMISSIONS
 // ======================================================================
-app.get('/api/projects', async (req, res) => {
+setTimeout(async () => {
+    try {
+        const existingAdmin = await DB.getUserByUsername('admin');
+        if (!existingAdmin) {
+            const salt = await bcrypt.genSalt(10);
+            const password_hash = await bcrypt.hash('191190', salt);
+            await DB.createUser({
+                username: 'admin',
+                password_hash,
+                role: 'ADMIN',
+                permissions: JSON.stringify({ "TRACKER":true, "CREATE":true, "LUBAN":true, "LIBRARY":true })
+            });
+            console.log('🌟 Đã tự động tạo tài khoản: admin | Mật khẩu: 191190');
+        }
+    } catch(e) { console.error('Seed Admin check error:', e.message); }
+}, 2000); // Đợi 2s để Supabase DB connection ổn định nếu có
+
+// ======================================================================
+// ÁO GIÁP BẢO VỆ API (MIDDLEWARE)
+// ======================================================================
+
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) return res.status(401).json({ error: 'Không tìm thấy token phiên làm việc' });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: 'Token không hợp lệ hoặc đã hết hạn' });
+    req.user = user;
+    next();
+  });
+};
+
+// ======================================================================
+// API: AUTH (ĐĂNG KÝ / ĐĂNG NHẬP)
+// ======================================================================
+
+app.post('/api/auth/register', async (req, res) => {
   try {
-    const projects = await DB.getProjects();
-    res.json(projects);
+    const { username, email, password, role } = req.body;
+    
+    // Kiểm tra đã tồn tại?
+    const existing = await DB.getUserByUsername(username);
+    if (existing) {
+       return res.status(400).json({ error: 'Tên truy cập đã tồn tại' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+
+    // Mặc định user đầu tiên hệ thống sẽ cho làm ADMIN nếu muốn (optional)
+    const newUserRole = role === 'ADMIN' ? 'ADMIN' : 'USER';
+
+    const newUser = await DB.createUser({
+      username,
+      email,
+      password_hash,
+      role: newUserRole
+    });
+
+    res.json({ success: true, message: 'Đăng ký thành công', user: { id: newUser.id, username, role: newUser.role }});
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post('/api/projects', async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   try {
-    const id = req.body.id || `proj_${Date.now()}`;
-    await DB.insertProject(req.body, id);
-    res.json({ success: true, id });
+    const { username, password } = req.body;
+    const user = await DB.getUserByUsername(username);
+
+    if (!user) {
+      return res.status(400).json({ error: 'Tên đăng nhập hoặc mật khẩu không đúng' });
+    }
+
+    const validPassword = await bcrypt.compare(password, user.password_hash);
+    if (!validPassword) {
+      return res.status(400).json({ error: 'Tên đăng nhập hoặc mật khẩu không đúng' });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, username: user.username, role: user.role, permissions: typeof user.permissions==='string'?JSON.parse(user.permissions):user.permissions },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    res.json({
+      success: true,
+      token,
+      user: { id: user.id, username: user.username, role: user.role, permissions: typeof user.permissions==='string'?JSON.parse(user.permissions):user.permissions }
+    });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.put('/api/projects/:id', async (req, res) => {
+app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
-    await DB.updateProject(req.body, req.params.id);
+    const user = await DB.getUserById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng' });
+    const perms = typeof user.permissions === 'string' ? JSON.parse(user.permissions) : user.permissions;
+    res.json({ user: { id: user.id, username: user.username, role: user.role, permissions: perms } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const user = await DB.getUserById(req.user.id);
+    if (!user) return res.status(400).json({ error: 'User không tồn tại' });
+    
+    const validPassword = await bcrypt.compare(oldPassword, user.password_hash);
+    if (!validPassword) {
+      return res.status(400).json({ error: 'Mật khẩu cũ không chính xác' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(newPassword, salt);
+    await DB.updatePassword(user.id, hash);
+    res.json({ success: true, message: 'Đổi mật khẩu thành công' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ======================================================================
+// API: ACCOUNT & RBAC
+// ======================================================================
+
+app.get('/api/users', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Truy cập bị từ chối' });
+    const users = await DB.getAllUsers();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/users/:id/permissions', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Truy cập bị từ chối' });
+    const permissions = req.body.permissions;
+    await DB.updateUserPermissions(req.params.id, permissions);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.delete('/api/projects/:id', async (req, res) => {
+
+// ======================================================================
+// API: HỒ SƠ DỰ ÁN
+// ======================================================================
+app.get('/api/projects', authenticateToken, async (req, res) => {
   try {
+    let projects = await DB.getProjects();
+    if (req.user.role !== 'ADMIN') {
+      projects = projects.filter(p => p.owner_id === req.user.id);
+    }
+    res.json(projects);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/projects', authenticateToken, async (req, res) => {
+  try {
+    const id = req.body.id || `proj_${Date.now()}`;
+    const p = { ...req.body, owner_id: req.user.id };
+    await DB.insertProject(p, id);
+    res.json({ success: true, id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/projects/:id', authenticateToken, async (req, res) => {
+  try {
+    const p = { ...req.body };
+    if (req.user.role !== 'ADMIN') {
+      const projects = await DB.getProjects();
+      const existing = projects.find(x => x.id === req.params.id);
+      if (!existing || existing.owner_id !== req.user.id) {
+         return res.status(403).json({ error: 'Không có quyền cập nhật dự án này' });
+      }
+      p.owner_id = req.user.id;
+    }
+    await DB.updateProject(p, req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') {
+      const projects = await DB.getProjects();
+      const existing = projects.find(x => x.id === req.params.id);
+      if (!existing || existing.owner_id !== req.user.id) {
+         return res.status(403).json({ error: 'Không có quyền xoá dự án này' });
+      }
+    }
     await DB.deleteProject(req.params.id);
     res.json({ success: true });
   } catch (err) {
@@ -294,11 +581,13 @@ app.delete('/api/projects/:id', async (req, res) => {
   }
 });
 
-app.post('/api/projects/migrate', async (req, res) => {
+app.post('/api/projects/migrate', authenticateToken, async (req, res) => {
   try {
     const { projects } = req.body;
     let count = 0;
     for (const p of projects) {
+       // Migrate gán cho Admin hoặc người up
+       p.owner_id = req.user.id;
        await DB.insertProject(p, p.id || `migrated_${Date.now()}_${count}`);
        count++;
     }
@@ -312,7 +601,7 @@ app.post('/api/projects/migrate', async (req, res) => {
 // API: THƯ VIỆN TÀI LIỆU
 // ======================================================================
 
-app.get('/api/docs/list', async (req, res) => {
+app.get('/api/docs/list', authenticateToken, async (req, res) => {
   try {
     const rows = await DB.getTreeNodes();
     const root = [];
@@ -335,7 +624,7 @@ app.get('/api/docs/list', async (req, res) => {
   }
 });
 
-app.get('/api/docs/content', async (req, res) => {
+app.get('/api/docs/content', authenticateToken, async (req, res) => {
   try {
     if (!req.query.path) return res.status(400).send('Missing path');
     const content = await DB.getFileContent(req.query.path.replace(/\\/g, '/'));
@@ -346,8 +635,9 @@ app.get('/api/docs/content', async (req, res) => {
   }
 });
 
-app.post('/api/docs/create-folder', async (req, res) => {
+app.post('/api/docs/create-folder', authenticateToken, async (req, res) => {
   try {
+    if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Chỉ Admin mới có tạo thư mục thư viện' });
     const dbPath = req.body.folderPath.replace(/\\/g, '/');
     const exists = await DB.isDocumentExists(dbPath);
     if (!exists) {
@@ -367,8 +657,9 @@ app.post('/api/docs/create-folder', async (req, res) => {
   }
 });
 
-app.post('/api/docs/save-text', async (req, res) => {
+app.post('/api/docs/save-text', authenticateToken, async (req, res) => {
   try {
+    if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Chỉ Admin mới có sửa tài liệu thư viện' });
     const dbPath = req.body.filePath.replace(/\\/g, '/');
     const content = req.body.content;
     const size = Buffer.byteLength(content, 'utf8');
@@ -387,8 +678,9 @@ app.post('/api/docs/save-text', async (req, res) => {
 
 import os from 'os';
 const upload = multer({ dest: path.join(os.tmpdir(), 'uploads_temp') });
-app.post('/api/docs/upload', upload.array('files'), async (req, res) => {
+app.post('/api/docs/upload', authenticateToken, upload.array('files'), async (req, res) => {
   try {
+    if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Chỉ Admin mới có upload tài liệu thư viện' });
     let destFolder = req.body.folder || '';
     if(Array.isArray(destFolder)) destFolder = destFolder[0];
     destFolder = destFolder.replace(/\\/g, '/');
@@ -424,8 +716,9 @@ app.post('/api/docs/upload', upload.array('files'), async (req, res) => {
   }
 });
 
-app.post('/api/docs/delete', async (req, res) => {
+app.post('/api/docs/delete', authenticateToken, async (req, res) => {
   try {
+    if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Chỉ Admin mới có quyền xoá tài liệu thư viện' });
     await DB.deleteDocument(req.body.itemPath.replace(/\\/g, '/'));
     res.json({ success: true });
   } catch (err) {

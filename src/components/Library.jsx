@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { BookOpen, Database, Folder, FolderOpen, FileText, File, Plus, Search, Upload, PlusSquare, Home, MapPin, Trash2, RefreshCw, X, ChevronRight, ChevronDown, Clock } from 'lucide-react';
 
 // ===== HUYỀN KHÔNG CÁC =====
-const TreeNode = ({ node, level, selectedPath, onSelect, expandedFolders, toggleFolder, onDelete }) => {
+const TreeNode = ({ node, level, selectedPath, onSelect, expandedFolders, toggleFolder, onDelete, isAdmin }) => {
   const isFolder = node.type === 'folder';
   const isExpanded = expandedFolders.has(node.path);
   const isSelected = selectedPath === node.path;
@@ -32,17 +32,19 @@ const TreeNode = ({ node, level, selectedPath, onSelect, expandedFolders, toggle
           </>
         )}
         
-        <button onClick={(e) => onDelete(node.path, isFolder, e)} 
-           className="opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-red-500 transition p-1 rounded hover:bg-red-50 flex-shrink-0" title="Xóa">
-           <Trash2 size={14}/>
-        </button>
+        {isAdmin && (
+           <button onClick={(e) => onDelete(node.path, isFolder, e)} 
+              className="opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-red-500 transition p-1 rounded hover:bg-red-50 flex-shrink-0" title="Xóa">
+              <Trash2 size={14}/>
+           </button>
+        )}
       </div>
       
       {isFolder && isExpanded && node.children && (
         <div className="mt-0.5">
           {node.children.map((child, idx) => (
             <TreeNode key={idx} node={child} level={level + 1} selectedPath={selectedPath} 
-                      onSelect={onSelect} expandedFolders={expandedFolders} toggleFolder={toggleFolder} onDelete={onDelete} />
+                      onSelect={onSelect} expandedFolders={expandedFolders} toggleFolder={toggleFolder} onDelete={onDelete} isAdmin={isAdmin} />
           ))}
         </div>
       )}
@@ -50,7 +52,8 @@ const TreeNode = ({ node, level, selectedPath, onSelect, expandedFolders, toggle
   );
 };
 
-const HuyenKhongCac = () => {
+const HuyenKhongCac = ({ currentUser }) => {
+  const isAdmin = currentUser?.role === 'ADMIN';
   const [tree, setTree] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileContent, setFileContent] = useState('');
@@ -206,15 +209,17 @@ const HuyenKhongCac = () => {
         <div className="flex-1 overflow-y-auto p-3">
           {displayTree.length === 0 ? <p className="text-xs text-slate-400 text-center py-4">Chưa có tài liệu.</p> : null}
           {displayTree.map((node, idx) => (
-            <TreeNode key={idx} node={node} level={0} selectedPath={selectedFile?.path} onSelect={handleSelect} expandedFolders={expandedFolders} toggleFolder={toggleFolder} onDelete={handleDeleteItem} />
+            <TreeNode key={idx} node={node} level={0} selectedPath={selectedFile?.path} onSelect={handleSelect} expandedFolders={expandedFolders} toggleFolder={toggleFolder} onDelete={handleDeleteItem} isAdmin={isAdmin} />
           ))}
         </div>
 
-        <div className="p-3 border-t border-slate-100 bg-slate-50 grid grid-cols-3 gap-1">
-          <button onClick={() => setModalType('folder')} className="flex flex-col items-center justify-center p-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition" title="Thư mục mới"><Folder size={18}/><span className="text-[10px] font-bold mt-1">Thư mục</span></button>
-          <button onClick={() => setModalType('upload')} className="flex flex-col items-center justify-center p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition" title="Tải file lên"><Upload size={18}/><span className="text-[10px] font-bold mt-1">Tải File</span></button>
-          <button onClick={() => setModalType('write')} className="flex flex-col items-center justify-center p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition" title="Viết bài mới"><PlusSquare size={18}/><span className="text-[10px] font-bold mt-1">Viết bài</span></button>
-        </div>
+        {isAdmin && (
+          <div className="p-3 border-t border-slate-100 bg-slate-50 grid grid-cols-3 gap-1">
+            <button onClick={() => setModalType('folder')} className="flex flex-col items-center justify-center p-2 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition" title="Thư mục mới"><Folder size={18}/><span className="text-xs font-bold mt-1">Thư mục</span></button>
+            <button onClick={() => setModalType('upload')} className="flex flex-col items-center justify-center p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition" title="Tải file lên"><Upload size={18}/><span className="text-xs font-bold mt-1">Tải File</span></button>
+            <button onClick={() => setModalType('write')} className="flex flex-col items-center justify-center p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition" title="Viết bài mới"><PlusSquare size={18}/><span className="text-xs font-bold mt-1">Viết bài</span></button>
+          </div>
+        )}
       </div>
 
       {/* MAIN VIEW */}
@@ -227,8 +232,12 @@ const HuyenKhongCac = () => {
                  <span className="text-xs font-mono text-slate-400 bg-slate-200/50 px-2 py-0.5 rounded-md mt-1 inline-block">{selectedFile.path}</span>
               </div>
               <div className="flex gap-2">
-                 <button onClick={() => { setTextContent(fileContent); setModalType('edit'); }} className="px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg text-sm font-bold transition flex items-center gap-1"><FileText size={14}/> Sửa</button>
-                 <button onClick={() => handleDeleteItem(selectedFile.path, false)} className="px-3 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-sm font-bold transition flex items-center gap-1"><Trash2 size={14}/> Xóa</button>
+                 {isAdmin && (
+                   <>
+                     <button onClick={() => { setTextContent(fileContent); setModalType('edit'); }} className="px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg text-sm font-bold transition flex items-center gap-1"><FileText size={14}/> Sửa</button>
+                     <button onClick={() => handleDeleteItem(selectedFile.path, false)} className="px-3 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-sm font-bold transition flex items-center gap-1"><Trash2 size={14}/> Xóa</button>
+                   </>
+                 )}
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-6 md:p-10 prose prose-slate max-w-none
@@ -328,8 +337,9 @@ const HuyenKhongCac = () => {
 };
 
 // ===== DATABASE (HỒ SƠ DỰ ÁN) =====
-export const DatabaseView = ({ projects, setProjects, setCurrentProject, setMainView }) => {
+export const DatabaseView = ({ projects, setProjects, setCurrentProject, setMainView, currentUser }) => {
   const [search, setSearch] = useState('');
+  const isAdmin = currentUser?.role === 'ADMIN';
 
   const handleDelete = async (id, e) => {
     e.stopPropagation();
@@ -387,14 +397,16 @@ export const DatabaseView = ({ projects, setProjects, setCurrentProject, setMain
           {filteredProjects.map(p => (
             <div key={p.id} onClick={() => handleOpen(p)}
               className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 hover:border-emerald-400 hover:shadow-lg transition-all cursor-pointer group relative">
-              <button onClick={(e) => handleDelete(p.id, e)}
-                title="Xóa dự án"
-                className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100 cursor-pointer z-10">
-                <Trash2 size={16} />
-              </button>
               <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4 text-emerald-600 group-hover:bg-emerald-100 transition-colors">
                 <Home size={24} />
               </div>
+              {isAdmin && (
+                <button onClick={(e) => handleDelete(p.id, e)}
+                  title="Xóa dự án"
+                  className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100 cursor-pointer z-10">
+                  <Trash2 size={16} />
+                </button>
+              )}
               <h3 className="text-xl font-black text-slate-800 line-clamp-1 pr-6" title={p.projectName || p.clientName}>{p.projectName || p.clientName}</h3>
               <p className="text-sm font-bold text-slate-400 mb-1 truncate">Gia chủ: {p.clientName}</p>
               <p className="text-sm text-slate-500 flex items-center gap-1 mt-1.5 mb-2 line-clamp-1">
@@ -423,7 +435,7 @@ export const DatabaseView = ({ projects, setProjects, setCurrentProject, setMain
 };
 
 // ===== LIBRARY (WRAPPER) =====
-const Library = ({ projects, setProjects, setCurrentProject, setMainView }) => {
+const Library = ({ projects, setProjects, setCurrentProject, setMainView, currentUser }) => {
   const [activeTab, setActiveTab] = useState('khac'); // 'khac' | 'database'
 
   const tabs = [
@@ -452,13 +464,14 @@ const Library = ({ projects, setProjects, setCurrentProject, setMainView }) => {
         })}
       </div>
 
-      {activeTab === 'khac'     && <HuyenKhongCac />}
+      {activeTab === 'khac'     && <HuyenKhongCac currentUser={currentUser} />}
       {activeTab === 'database' && (
         <DatabaseView
           projects={projects}
           setProjects={setProjects}
           setCurrentProject={setCurrentProject}
           setMainView={setMainView}
+          currentUser={currentUser}
         />
       )}
     </div>
