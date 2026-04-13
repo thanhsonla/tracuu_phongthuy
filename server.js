@@ -4,11 +4,15 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
-import Database from 'better-sqlite3';
 import mammoth from 'mammoth';
 import TurndownService from 'turndown';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
+import { createRequire } from 'module';
+
+// Đoạn này lừa Vercel Bundler để nó không cố gói better-sqlite3 C++ native code
+const customRequire = createRequire(import.meta.url);
+const sqlModuleName = 'better-sqlite3';
 
 // Load biến môi trường từ file .env
 dotenv.config();
@@ -39,12 +43,22 @@ if (isCloud) {
   supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 } else {
   console.log('💻 KHỞI ĐỘNG CHẾ ĐỘ CỤC BỘ (LOCAL - SQLITE)');
-  const dbPath = path.resolve(__dirname, 'hkpt.db');
-  dbLocal = new Database(dbPath);
-  dbLocal.pragma('journal_mode = WAL');
+  
+  // Dùng require động để tránh vỡ Serverless
+  let Database;
+  try {
+     Database = customRequire(sqlModuleName);
+  } catch(err) {
+     console.error("Cảnh báo: Khởi động Local thất bại do thiếu better-sqlite3.", err);
+  }
 
-  // Khởi tạo bảng projects local
-  dbLocal.exec(`
+  if (Database) {
+    const dbPath = path.resolve(__dirname, 'hkpt.db');
+    dbLocal = new Database(dbPath);
+    dbLocal.pragma('journal_mode = WAL');
+
+    // Khởi tạo bảng projects local
+    dbLocal.exec(`
     CREATE TABLE IF NOT EXISTS projects (
       id TEXT PRIMARY KEY,
       projectName TEXT NOT NULL DEFAULT '',
@@ -76,6 +90,7 @@ if (isCloud) {
       updatedAt TEXT DEFAULT (datetime('now','localtime'))
     )
   `);
+  }
 }
 
 // ======================================================================
