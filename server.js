@@ -385,7 +385,8 @@ app.post('/api/docs/save-text', async (req, res) => {
   }
 });
 
-const upload = multer({ dest: path.join(__dirname, 'uploads_temp') });
+import os from 'os';
+const upload = multer({ dest: path.join(os.tmpdir(), 'uploads_temp') });
 app.post('/api/docs/upload', upload.array('files'), async (req, res) => {
   try {
     let destFolder = req.body.folder || '';
