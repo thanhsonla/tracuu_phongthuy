@@ -333,25 +333,25 @@ const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProj
         {/* VIEW TABS */}
         <div className="flex gap-1 bg-slate-200/50 p-1.5 rounded-2xl w-full md:w-fit mt-4 mx-auto md:mx-0 shadow-inner overflow-x-auto">
            <button onClick={() => setActiveTab('TINH_BAN')} className={`px-4 md:px-6 py-2.5 rounded-xl font-black text-sm transition-all focus:outline-none flex whitespace-nowrap items-center gap-2 ${activeTab==='TINH_BAN' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}>
-              <Compass size={18} /> La Kinh & Tinh Bàn
+              <Compass size={18} /> La Bàn
            </button>
            <button onClick={() => setActiveTab('MAT_BANG')} className={`px-4 md:px-6 py-2.5 rounded-xl font-black text-sm transition-all focus:outline-none flex whitespace-nowrap items-center gap-2 ${activeTab==='MAT_BANG' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}>
-              <Map size={18} /> Trải Bản Vẽ
+              <Map size={18} /> Vẽ
            </button>
            <button onClick={() => setActiveTab('BAT_TRACH')} className={`px-4 md:px-6 py-2.5 rounded-xl font-black text-sm transition-all focus:outline-none flex whitespace-nowrap items-center gap-2 ${activeTab==='BAT_TRACH' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}>
               <Compass size={18} /> Bát Trạch
            </button>
            <button onClick={() => setActiveTab('PHAN_TICH')} className={`px-4 md:px-6 py-2.5 rounded-xl font-black text-sm transition-all focus:outline-none flex whitespace-nowrap items-center gap-2 ${activeTab==='PHAN_TICH' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}>
-              <Activity size={18} /> Phân Tích 9 Cung
+              <Activity size={18} /> Cửu Cung
            </button>
            <button onClick={() => setActiveTab('CHON_NGAY')} className={`px-4 md:px-6 py-2.5 rounded-xl font-black text-sm transition-all focus:outline-none flex whitespace-nowrap items-center gap-2 ${activeTab==='CHON_NGAY' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}>
-              <Calendar size={18} /> Tuyển Ngày Cát Tường
+              <Calendar size={18} /> Tuyển Ngày
            </button>
            <button onClick={() => setActiveTab('DU_BAO')} className={`px-4 md:px-6 py-2.5 rounded-xl font-black text-sm transition-all focus:outline-none flex whitespace-nowrap items-center gap-2 ${activeTab==='DU_BAO' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}>
-               <TrendingUp size={18} /> Dự Báo Lưu Niên
+               <TrendingUp size={18} /> Dự Báo
             </button>
             <button onClick={() => setActiveTab('CRM')} className={`px-4 md:px-6 py-2.5 rounded-xl font-black text-sm transition-all focus:outline-none flex whitespace-nowrap items-center gap-2 ${activeTab==='CRM' ? 'bg-white text-amber-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}>
-              <FileText size={18} /> Nhật Ký Khảo Sát
+              <FileText size={18} /> Nhật Ký
            </button>
         </div>
 
