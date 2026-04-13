@@ -205,8 +205,6 @@ const CreateProject = ({ setView, projects, setProjects, setCurrentProject, curr
                  <label className="text-xs font-bold text-slate-500 uppercase">Hình thế Loan Đầu & Sát khí ngoài nhà (Hệ thống sẽ tự động phân tích)</label>
                  <textarea rows="3" value={formData.loanDau} onChange={e=>setFormData({...formData, loanDau: e.target.value})} className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium resize-none bg-white text-sm text-slate-800 placeholder-slate-400" placeholder="VD: Trước cửa có cột điện lớn, bên phải nhà cao hơn trái, hẻm nhỏ phía sau đâm thẳng vào, gần nghĩa trang, đối diện khe hẹp 2 tòa nhà, dây điện chằng chịt trước cửa sổ..."></textarea>
                  <p className="text-[11px] text-slate-400 italic">💡 Mô tả chi tiết môi trường xung quanh nhà. Hệ thống sẽ tự động nhận diện 20 loại sát khí và đề xuất phương pháp hóa giải.</p>
-              </div>m thẳng vào, gần nghĩa trang, đối diện khe hẹp 2 tòa nhà, dây điện chằng chịt trước cửa sổ..."></textarea>
-                 <p className="text-[11px] text-slate-400 italic">💡 Mô tả chi tiết môi trường xung quanh nhà. Hệ thống sẽ tự động nhận diện 20 loại sát khí và đề xuất phương pháp hóa giải.</p>
               </div>
           </div>
 
