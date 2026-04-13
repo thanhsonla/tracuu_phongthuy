@@ -436,7 +436,21 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    const user = await DB.getUserByUsername(username);
+    let user = await DB.getUserByUsername(username);
+
+    // Bơm tự động Admin dành riêng cho kiến trúc Vercel (Cloud)
+    // Do Vercel ko chạy background timeout lúc start server
+    if (!user && username === 'vn24h.bnb' && password === 'Love11618') {
+        const salt = await bcrypt.genSalt(10);
+        const password_hash = await bcrypt.hash('Love11618', salt);
+        user = await DB.createUser({
+            username: 'vn24h.bnb',
+            password_hash,
+            role: 'ADMIN',
+            permissions: JSON.stringify({ "TRACKER":true, "CREATE":true, "LUBAN":true, "LIBRARY":true })
+        });
+        console.log("🌟 Đã tự động Seed tài khoản Quản trị qua Login API");
+    }
 
     if (!user) {
       return res.status(400).json({ error: 'Tên đăng nhập hoặc mật khẩu không đúng' });
