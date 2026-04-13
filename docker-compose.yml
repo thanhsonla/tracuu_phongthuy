@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  xuan-kong-app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: huyen-khong-app:latest
+    container_name: huyen-khong-app
+    ports:
+      - "8080:80"
+    restart: unless-stopped

@@ -1,0 +1,428 @@
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import multer from 'multer';
+import Database from 'better-sqlite3';
+import mammoth from 'mammoth';
+import TurndownService from 'turndown';
+import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
+
+// Load biến môi trường từ file .env
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// ===== Middleware =====
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+
+// ===== Môi trường CSDL =====
+let dbLocal = null;
+let supabase = null;
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
+
+const isCloud = !!(SUPABASE_URL && SUPABASE_KEY);
+
+const docsDir = path.resolve(__dirname, 'src/data/docs');
+
+if (isCloud) {
+  console.log('☁️ KHỞI ĐỘNG CHẾ ĐỘ MÂY HÓA (CLOUD - SUPABASE POSTGRES)');
+  supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+} else {
+  console.log('💻 KHỞI ĐỘNG CHẾ ĐỘ CỤC BỘ (LOCAL - SQLITE)');
+  const dbPath = path.resolve(__dirname, 'hkpt.db');
+  dbLocal = new Database(dbPath);
+  dbLocal.pragma('journal_mode = WAL');
+
+  // Khởi tạo bảng projects local
+  dbLocal.exec(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      projectName TEXT NOT NULL DEFAULT '',
+      clientName TEXT NOT NULL DEFAULT '',
+      address TEXT DEFAULT '',
+      degree REAL DEFAULT 0,
+      period INTEGER DEFAULT 9,
+      yearBuilt INTEGER DEFAULT 2024,
+      menhQuai TEXT DEFAULT '',
+      birthYear INTEGER DEFAULT 1990,
+      gender TEXT DEFAULT 'Nam',
+      loanDau TEXT DEFAULT '',
+      details TEXT DEFAULT '{}',
+      notes TEXT DEFAULT '[]',
+      createdAt TEXT DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+
+  // Khởi tạo bảng documents local
+  dbLocal.exec(`
+    CREATE TABLE IF NOT EXISTS documents (
+      id TEXT PRIMARY KEY,
+      path TEXT UNIQUE NOT NULL,
+      type TEXT NOT NULL,
+      content TEXT,
+      size INTEGER DEFAULT 0,
+      createdAt TEXT DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `);
+}
+
+// ======================================================================
+// DATABASE ADAPTER (CẦU NỐI 2 MÔI TRƯỜNG)
+// ======================================================================
+const DB = {
+  async getProjects() {
+    if (isCloud) {
+       const { data, error } = await supabase.from('projects').select('*').order('updatedAt', { ascending: false });
+       if (error) throw error;
+       // JSON fields in Postgres JSONB are already objects
+       return data.map(r => ({
+           ...r,
+           details: typeof r.details === 'string' ? JSON.parse(r.details) : r.details,
+           notes: typeof r.notes === 'string' ? JSON.parse(r.notes) : r.notes,
+       }));
+    } else {
+       return dbLocal.prepare('SELECT * FROM projects ORDER BY updatedAt DESC').all().map(r => ({
+         ...r,
+         details: JSON.parse(r.details || '{}'),
+         notes: JSON.parse(r.notes || '[]'),
+       }));
+    }
+  },
+
+  async insertProject(p, id) {
+    const payload = {
+      id,
+      projectName: p.projectName || p.clientName || '',
+      clientName: p.clientName || '',
+      address: p.address || '',
+      degree: p.degree || 0,
+      period: p.period || 9,
+      yearBuilt: p.yearBuilt || 2024,
+      menhQuai: p.menhQuai || '',
+      birthYear: p.birthYear || 1990,
+      gender: p.gender || 'Nam',
+      loanDau: p.loanDau || '',
+      details: isCloud ? (p.details || {}) : JSON.stringify(p.details || {}),
+      notes: isCloud ? (p.notes || []) : JSON.stringify(p.notes || [])
+    };
+    
+    if (isCloud) {
+      const { error } = await supabase.from('projects').insert([payload]);
+      if (error) throw error;
+    } else {
+      const stmt = dbLocal.prepare(`INSERT INTO projects (id, projectName, clientName, address, degree, period, yearBuilt, menhQuai, birthYear, gender, loanDau, details, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+      stmt.run(payload.id, payload.projectName, payload.clientName, payload.address, payload.degree, payload.period, payload.yearBuilt, payload.menhQuai, payload.birthYear, payload.gender, payload.loanDau, payload.details, payload.notes);
+    }
+  },
+
+  async updateProject(p, id) {
+    const payload = {
+      projectName: p.projectName || p.clientName || '',
+      clientName: p.clientName || '',
+      address: p.address || '',
+      degree: p.degree || 0,
+      period: p.period || 9,
+      yearBuilt: p.yearBuilt || 2024,
+      menhQuai: p.menhQuai || '',
+      birthYear: p.birthYear || 1990,
+      gender: p.gender || 'Nam',
+      loanDau: p.loanDau || '',
+      details: isCloud ? (p.details || {}) : JSON.stringify(p.details || {}),
+      notes: isCloud ? (p.notes || []) : JSON.stringify(p.notes || [])
+    };
+
+    if (isCloud) {
+      payload.updatedAt = new Date().toISOString();
+      const { error } = await supabase.from('projects').update(payload).eq('id', id);
+      if (error) throw error;
+    } else {
+      const stmt = dbLocal.prepare(`UPDATE projects SET projectName=?, clientName=?, address=?, degree=?, period=?, yearBuilt=?, menhQuai=?, birthYear=?, gender=?, loanDau=?, details=?, notes=?, updatedAt=datetime('now','localtime') WHERE id=?`);
+      stmt.run(payload.projectName, payload.clientName, payload.address, payload.degree, payload.period, payload.yearBuilt, payload.menhQuai, payload.birthYear, payload.gender, payload.loanDau, payload.details, payload.notes, id);
+    }
+  },
+
+  async deleteProject(id) {
+    if (isCloud) {
+      const { error } = await supabase.from('projects').delete().eq('id', id);
+      if (error) throw error;
+    } else {
+      dbLocal.prepare('DELETE FROM projects WHERE id=?').run(id);
+    }
+  },
+
+  async getTreeNodes() {
+    if (isCloud) {
+      const { data, error } = await supabase.from('documents').select('path, type, size').order('path', { ascending: true });
+      if (error) throw error;
+      return data;
+    } else {
+      return dbLocal.prepare('SELECT path, type, size FROM documents ORDER BY path ASC').all();
+    }
+  },
+
+  async getFileContent(dbPath) {
+    if (isCloud) {
+      const { data, error } = await supabase.from('documents').select('content').eq('path', dbPath).eq('type', 'file').single();
+      if (error && error.code !== 'PGRST116') throw error; // ignore no rows
+      return data ? data.content : null;
+    } else {
+      const row = dbLocal.prepare('SELECT content FROM documents WHERE path=? AND type=?').get(dbPath, 'file');
+      return row ? row.content : null;
+    }
+  },
+
+  async isDocumentExists(dbPath) {
+    if (isCloud) {
+      const { data, error } = await supabase.from('documents').select('path').eq('path', dbPath).single();
+      return !!data;
+    } else {
+      return !!dbLocal.prepare('SELECT path FROM documents WHERE path=?').get(dbPath);
+    }
+  },
+
+  async insertFolder(dbPath) {
+    if (isCloud) {
+      const { error } = await supabase.from('documents').upsert([{ id: dbPath, path: dbPath, type: 'folder' }]);
+      if (error) throw error;
+    } else {
+      dbLocal.prepare('INSERT OR IGNORE INTO documents (id, path, type) VALUES (?, ?, ?)').run(dbPath, dbPath, 'folder');
+    }
+  },
+
+  async upsertFileContent(dbPath, content, size) {
+    const exists = await this.isDocumentExists(dbPath);
+    if (isCloud) {
+      const payload = { id: dbPath, path: dbPath, type: 'file', content, size, updatedAt: new Date().toISOString() };
+      const { error } = await supabase.from('documents').upsert([payload]);
+      if (error) throw error;
+    } else {
+      if (exists) {
+        dbLocal.prepare('UPDATE documents SET content=?, size=?, updatedAt=datetime("now","localtime") WHERE path=?').run(content, size, dbPath);
+      } else {
+        dbLocal.prepare('INSERT INTO documents (id, path, type, content, size) VALUES (?, ?, ?, ?, ?)').run(dbPath, dbPath, 'file', content, size);
+      }
+    }
+  },
+
+  async deleteDocument(dbPath) {
+    if (isCloud) {
+      await supabase.from('documents').delete().eq('path', dbPath);
+      await supabase.from('documents').delete().like('path', `${dbPath}/%`);
+    } else {
+      dbLocal.prepare('DELETE FROM documents WHERE path = ?').run(dbPath);
+      dbLocal.prepare('DELETE FROM documents WHERE path LIKE ?').run(`${dbPath}/%`);
+    }
+  }
+};
+
+// ======================================================================
+// API: HỒ SƠ DỰ ÁN
+// ======================================================================
+app.get('/api/projects', async (req, res) => {
+  try {
+    const projects = await DB.getProjects();
+    res.json(projects);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/projects', async (req, res) => {
+  try {
+    const id = req.body.id || `proj_${Date.now()}`;
+    await DB.insertProject(req.body, id);
+    res.json({ success: true, id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/projects/:id', async (req, res) => {
+  try {
+    await DB.updateProject(req.body, req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/projects/:id', async (req, res) => {
+  try {
+    await DB.deleteProject(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/projects/migrate', async (req, res) => {
+  try {
+    const { projects } = req.body;
+    let count = 0;
+    for (const p of projects) {
+       await DB.insertProject(p, p.id || `migrated_${Date.now()}_${count}`);
+       count++;
+    }
+    res.json({ success: true, migrated: count });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ======================================================================
+// API: THƯ VIỆN TÀI LIỆU
+// ======================================================================
+
+app.get('/api/docs/list', async (req, res) => {
+  try {
+    const rows = await DB.getTreeNodes();
+    const root = [];
+    const map = {};
+    for (const r of rows) map[r.path] = { ...r, name: r.path.split('/').pop(), children: [] };
+    
+    for (const r of rows) {
+       const parts = r.path.split('/');
+       const dir = parts.slice(0, -1).join('/');
+       if (dir === '') root.push(map[r.path]);
+       else {
+           if (map[dir]) map[dir].children.push(map[r.path]);
+           else root.push(map[r.path]);
+       }
+    }
+    rows.forEach(r => { if (map[r.path].type === 'file') delete map[r.path].children; });
+    res.json(root);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/docs/content', async (req, res) => {
+  try {
+    if (!req.query.path) return res.status(400).send('Missing path');
+    const content = await DB.getFileContent(req.query.path.replace(/\\/g, '/'));
+    if (content !== null) res.type('text/plain').send(content);
+    else res.status(404).send('File not found');
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/docs/create-folder', async (req, res) => {
+  try {
+    const dbPath = req.body.folderPath.replace(/\\/g, '/');
+    const exists = await DB.isDocumentExists(dbPath);
+    if (!exists) {
+      await DB.insertFolder(dbPath);
+      const parts = dbPath.split('/');
+      let cur = '';
+      for (let i = 0; i < parts.length - 1; i++) {
+         cur = cur ? `${cur}/${parts[i]}` : parts[i];
+         await DB.insertFolder(cur);
+      }
+      res.json({ success: true });
+    } else {
+      res.status(400).json({ error: 'Folder already exists' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/docs/save-text', async (req, res) => {
+  try {
+    const dbPath = req.body.filePath.replace(/\\/g, '/');
+    const content = req.body.content;
+    const size = Buffer.byteLength(content, 'utf8');
+    
+    await DB.upsertFileContent(dbPath, content, size);
+    
+    // Auto Create parent
+    const parentDir = dbPath.split('/').slice(0, -1).join('/');
+    if (parentDir) await DB.insertFolder(parentDir);
+    
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+const upload = multer({ dest: path.join(__dirname, 'uploads_temp') });
+app.post('/api/docs/upload', upload.array('files'), async (req, res) => {
+  try {
+    let destFolder = req.body.folder || '';
+    if(Array.isArray(destFolder)) destFolder = destFolder[0];
+    destFolder = destFolder.replace(/\\/g, '/');
+    
+    const results = [];
+    for (const file of (req.files || [])) {
+      const originalName = file.originalname || 'upload.md';
+      const baseName = path.parse(originalName).name;
+      const ext = path.extname(originalName).toLowerCase();
+      
+      const destFileName = `${baseName}.md`;
+      const dbPath = destFolder ? `${destFolder}/${destFileName}` : destFileName;
+
+      let markdownContent = '';
+      if (ext === '.docx' || ext === '.doc') {
+        const buffer = fs.readFileSync(file.path);
+        const result = await mammoth.convertToHtml({ buffer });
+        const turndownService = new TurndownService({ headingStyle: 'atx' });
+        markdownContent = turndownService.turndown(result.value);
+      } else if (ext === '.md' || ext === '.txt') {
+        markdownContent = fs.readFileSync(file.path, 'utf8');
+      }
+
+      await DB.upsertFileContent(dbPath, markdownContent, Buffer.byteLength(markdownContent, 'utf8'));
+      if (destFolder) await DB.insertFolder(destFolder);
+      
+      results.push(destFileName);
+      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+    }
+    res.json({ success: true, files: results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/docs/delete', async (req, res) => {
+  try {
+    await DB.deleteDocument(req.body.itemPath.replace(/\\/g, '/'));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ======================================================================
+// SERVERLESS EXPORT VÀ PRODUCTION
+// ======================================================================
+const distPath = path.join(__dirname, 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.use((req, res, next) => {
+    if (!req.path.startsWith('/api/')) res.sendFile(path.join(distPath, 'index.html'));
+    else next();
+  });
+}
+
+// Khởi chạy khi dùng môi trường cục bộ
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`\n🚀 HKPT Backend đang chạy tại cổng ${PORT}`);
+  });
+}
+
+// Export cho Vercel sử dụng làm API Handler
+export default app;
