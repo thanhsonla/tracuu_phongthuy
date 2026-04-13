@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Compass, Clock, PlusCircle, Library as LibraryIcon, Ruler, LogOut, User as UserIcon } from 'lucide-react';
 import TimeStarTracker from './components/TimeStarTracker';
+import CreateProject from './components/CreateProject';
 import ProjectResult from './components/ProjectResult';
 import Library from './components/Library';
 import LuBanRuler from './components/LuBanRuler';
