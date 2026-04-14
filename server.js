@@ -81,6 +81,7 @@ if (!supabase) {
       password_hash TEXT NOT NULL,
       role TEXT DEFAULT 'USER',
       permissions TEXT DEFAULT '{"TRACKER":true,"CREATE":true,"LUBAN":true,"LIBRARY":true}',
+      last_login TEXT DEFAULT NULL,
       created_at TEXT DEFAULT (datetime('now','localtime'))
     )
     `);
@@ -90,6 +91,10 @@ if (!supabase) {
       if (uInfo.length > 0 && !uInfo.find(c => c.name === 'permissions')) {
         dbLocal.exec("ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT '{\"TRACKER\":true,\"CREATE\":true,\"LUBAN\":true,\"LIBRARY\":true}'");
         console.log("Migrated SQLite: Added permissions to users");
+      }
+      if (uInfo.length > 0 && !uInfo.find(c => c.name === 'last_login')) {
+        dbLocal.exec("ALTER TABLE users ADD COLUMN last_login TEXT DEFAULT NULL");
+        console.log("Migrated SQLite: Added last_login to users");
       }
     } catch(e) { }
 
@@ -352,13 +357,44 @@ const DB = {
     }
   },
 
+  async updateUserLogin(id) {
+    const user = await this.getUserById(id);
+    if (!user) return;
+    let history = [];
+    try {
+      history = JSON.parse(user.last_login || '[]');
+      if (!Array.isArray(history)) history = [user.last_login];
+    } catch(e) {
+      if (user.last_login) history = [user.last_login];
+    }
+
+    const now = new Date().toISOString();
+    history.unshift(now);
+    history = history.slice(0, 5); // Keep up to 5 recent logins
+    const historyStr = JSON.stringify(history);
+
+    if (isCloud) {
+       await supabase.from('users').update({ last_login: historyStr }).eq('id', id);
+    } else {
+       dbLocal.prepare('UPDATE users SET last_login=? WHERE id=?').run(historyStr, id);
+    }
+  },
+
+  async deleteUser(id) {
+    if (isCloud) {
+       await supabase.from('users').delete().eq('id', id);
+    } else {
+       dbLocal.prepare('DELETE FROM users WHERE id=?').run(id);
+    }
+  },
+
   async getAllUsers() {
     if (isCloud) {
-       const { data } = await supabase.from('users').select('id, username, email, role, permissions, created_at').order('created_at', { ascending: false });
+       const { data } = await supabase.from('users').select('id, username, email, role, permissions, created_at, last_login').order('created_at', { ascending: false });
        if (data) return data.map(u => ({ ...u, permissions: typeof u.permissions==='string'?JSON.parse(u.permissions):u.permissions }));
        return [];
     } else {
-       const rows = dbLocal.prepare('SELECT id, username, email, role, permissions, created_at FROM users ORDER BY created_at DESC').all();
+       const rows = dbLocal.prepare('SELECT id, username, email, role, permissions, created_at, last_login FROM users ORDER BY created_at DESC').all();
        return rows.map(u => ({ ...u, permissions: JSON.parse(u.permissions || '{"TRACKER":true,"CREATE":true,"LUBAN":true,"LIBRARY":true}') }));
     }
   }
@@ -468,6 +504,9 @@ app.post('/api/auth/login', async (req, res) => {
       { expiresIn: '30d' }
     );
 
+    // Ghi nhận thời gian đăng nhập
+    DB.updateUserLogin(user.id).catch(e => console.error("Lỗi cập nhật thời gian đăng nhập:", e));
+
     res.json({
       success: true,
       token,
@@ -529,6 +568,18 @@ app.put('/api/users/:id/permissions', authenticateToken, async (req, res) => {
     if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Truy cập bị từ chối' });
     const permissions = req.body.permissions;
     await DB.updateUserPermissions(req.params.id, permissions);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/users/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Chỉ Admin mới có quyền xóa người dùng' });
+    const id = req.params.id;
+    if (id === req.user.id) return res.status(400).json({ error: 'Không thể tự xóa bản thân' });
+    await DB.deleteUser(id);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
