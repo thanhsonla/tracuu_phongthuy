@@ -72,6 +72,8 @@ const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProj
   const [selectedCell, setSelectedCell] = useState(null);
   const [annualYear, setAnnualYear] = useState(new Date().getFullYear());
   const [newNote, setNewNote] = useState('');
+  const [noteDate, setNoteDate] = useState(() => { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); return now.toISOString().slice(0, 16); });
+  const [noteImage, setNoteImage] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   
   const [customAnalysis, setCustomAnalysis] = useState(project.analysis || {});
@@ -137,11 +139,39 @@ const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProj
     }
   };
 
+  const handleNoteImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800; // Giới hạn chiều rộng
+        let finalWidth = img.width;
+        let finalHeight = img.height;
+        if (img.width > MAX_WIDTH) {
+           const scaleSize = MAX_WIDTH / img.width;
+           finalWidth = MAX_WIDTH;
+           finalHeight = img.height * scaleSize;
+        }
+        canvas.width = finalWidth;
+        canvas.height = finalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, finalWidth, finalHeight);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setNoteImage(dataUrl);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveNote = async () => {
-    if (!newNote.trim() || !projects) return;
+    if ((!newNote.trim() && !noteImage) || !projects) return;
     const updatedProject = {
       ...project,
-      notes: [...(project.notes || []), { date: getLocalYMD(), text: newNote.trim() }]
+      notes: [...(project.notes || []), { date: noteDate || getLocalYMD(), text: newNote.trim(), image: noteImage }]
     };
     
     try {
@@ -154,9 +184,11 @@ const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProj
       const updatedProjects = projects.map(p => p.id === project.id ? updatedProject : p);
       setProjects(updatedProjects);
       setNewNote('');
+      setNoteImage(null);
+      setNoteDate(() => { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); return now.toISOString().slice(0, 16); });
     } catch (err) {
       console.error(err);
-      alert('Lỗi lưu ghi chú');
+      alert('Lỗi lưu nhật ký/ghi chú');
     }
   };
 
@@ -673,15 +705,46 @@ const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProj
 
               {/* Box Thêm Ghi Chú */}
               <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-200 shadow-inner">
-                 <label className="text-sm font-bold text-slate-700 uppercase tracking-widest mb-2 flex items-center gap-2"><Plus size={16}/> Thêm Ghi Chú Mới</label>
-                 <textarea 
-                    value={newNote} onChange={e => setNewNote(e.target.value)}
-                    rows="3"
-                    className="w-full px-4 py-3 rounded-xl border border-amber-300 focus:border-amber-500 outline-none font-medium bg-white text-sm resize-none shadow-sm placeholder-slate-400" 
-                    placeholder="Nhập nội dung tư vấn, lịch sử khảo sát thực địa, hay lời khuyên năm mới cho thay đổi lưu niên..."></textarea>
-                 <div className="flex justify-end mt-3">
-                    <button onClick={handleSaveNote} disabled={!newNote.trim() || !projects} className="bg-amber-600 hover:bg-amber-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black px-6 py-2.5 rounded-xl shadow-md transition-colors flex items-center gap-2">
-                       Lưu Ghi Chú
+                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-3 gap-2">
+                    <label className="text-sm font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                       <Plus size={16}/> Thêm Nhật Ký / Ghi Chú Mới
+                    </label>
+                    <div className="flex items-center gap-2">
+                       <label className="text-xs font-bold text-slate-500 uppercase">Thời gian:</label>
+                       <input 
+                         type="datetime-local" 
+                         value={noteDate} onChange={e => setNoteDate(e.target.value)}
+                         className="px-3 py-1.5 rounded-lg border border-amber-200 focus:border-amber-500 outline-none text-xs font-medium bg-white text-slate-800"
+                       />
+                    </div>
+                 </div>
+                 
+                 <div className="space-y-3">
+                    <textarea 
+                       value={newNote} onChange={e => setNewNote(e.target.value)}
+                       rows="3"
+                       className="w-full px-4 py-3 rounded-xl border border-amber-300 focus:border-amber-500 outline-none font-medium bg-white text-sm resize-none shadow-sm placeholder-slate-400" 
+                       placeholder="Nhập nội dung tư vấn, lịch sử khảo sát thực địa, hay lời khuyên năm mới cho thay đổi lưu niên..."></textarea>
+                    
+                    {/* Phần đính kèm hình ảnh */}
+                    <div className="flex items-center gap-3">
+                       <label className="cursor-pointer bg-white border border-amber-300 text-amber-700 px-4 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-amber-50 hover:border-amber-400 transition-colors flex items-center gap-1.5">
+                          <span>Đính kèm hình ảnh</span>
+                          <input type="file" accept="image/*" onChange={handleNoteImageSelect} className="hidden" />
+                       </label>
+                       {noteImage && (
+                          <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-amber-200 shadow-sm pr-1">
+                             <img src={noteImage} alt="Attachment" className="h-8 w-8 object-cover rounded" />
+                             <span className="text-[10px] text-slate-500">Đã đính kèm</span>
+                             <button onClick={() => setNoteImage(null)} className="p-1 hover:bg-slate-100 rounded text-red-500" title="Xóa ảnh"><X size={14}/></button>
+                          </div>
+                       )}
+                    </div>
+                 </div>
+
+                 <div className="flex justify-end mt-4 pt-3 border-t border-amber-200/50">
+                    <button onClick={handleSaveNote} disabled={(!newNote.trim() && !noteImage) || !projects} className="bg-amber-600 hover:bg-amber-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black px-6 py-2.5 rounded-xl shadow-md transition-colors flex items-center gap-2">
+                       Lưu Nhật Ký
                     </button>
                     {!projects && <span className="text-[10px] text-red-500 ml-2 mt-2">Dự án này không có trong DB.</span>}
                  </div>
@@ -689,10 +752,10 @@ const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProj
 
               {/* Timeline Ghi chú */}
               <div className="space-y-4">
-                 <h4 className="font-black text-lg text-slate-700 mb-4 pb-2">Lịch Sử Ghi Chú</h4>
+                 <h4 className="font-black text-lg text-slate-700 mb-4 pb-2">Lịch Sử Tư Vấn & Khảo Sát</h4>
                  {(!Array.isArray(project.notes) || project.notes.length === 0) ? (
                     <div className="text-center py-10 text-slate-400 font-medium italic border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
-                       Chưa có ghi chú nào. Hãy thêm ghi chú đầu tiên ở hộp trên.
+                       Chưa có nhật ký nào. Hãy ghi lại nội dung buổi tư vấn đầu tiên.
                     </div>
                  ) : (
                     <div className="relative border-l-2 border-indigo-200 ml-3 md:ml-4 space-y-6 pb-4">
@@ -702,9 +765,16 @@ const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProj
                              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
                                 <div className="flex items-center gap-2 text-indigo-600 mb-2 font-bold text-xs uppercase tracking-wider">
                                    <Clock size={14} /> 
-                                   {new Date(note.date).toLocaleString('vi-VN')}
+                                   Thời gian: {new Date(note.date).toLocaleString('vi-VN')}
                                 </div>
-                                <p className="text-slate-700 text-sm md:text-base whitespace-pre-wrap">{note.text}</p>
+                                {note.text && <p className="text-slate-700 text-sm md:text-base whitespace-pre-wrap">{note.text}</p>}
+                                {note.image && (
+                                   <div className="mt-3">
+                                      <a href={note.image} target="_blank" rel="noreferrer">
+                                         <img src={note.image} alt="Note Attachment" className="max-w-full md:max-w-md rounded-xl border border-slate-200 shadow-sm cursor-zoom-in hover:opacity-90 transition-opacity" />
+                                      </a>
+                                   </div>
+                                )}
                              </div>
                           </div>
                        ))}

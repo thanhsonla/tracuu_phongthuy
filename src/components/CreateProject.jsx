@@ -22,7 +22,9 @@ const CreateProject = ({ setView, projects, setProjects, setCurrentProject, curr
       projectName: '',
       clientName: '', dob: '', gender: 'Nam', 
       familyMembers: [],
+      familyMembers: [],
       address: '', buildYear: new Date().getFullYear(),
+      buildArea: '',
       degree: 180, designReq: '', loanDau: ''
     };
   });
@@ -237,7 +239,11 @@ const CreateProject = ({ setView, projects, setProjects, setCurrentProject, curr
                     <input type="number" required value={formData.buildYear} onChange={e=>setFormData({...formData, buildYear: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium bg-white text-sm text-slate-800" placeholder="VD: 2024"/>
                  </div>
                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Tọa độ hướng (Độ) *</label>
+                    <label className="text-xs font-bold text-slate-500 uppercase">Diện tích XD (m²)</label>
+                    <input type="number" step="0.1" min="0" value={formData.buildArea || ''} onChange={e=>setFormData({...formData, buildArea: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium bg-white text-sm text-slate-800" placeholder="VD: 150.5"/>
+                 </div>
+                 <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Tọa độ châm (Độ) *</label>
                     <input type="number" required min="0" max="360" step="0.1" value={formData.degree} onChange={e=>setFormData({...formData, degree: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-black text-indigo-700 bg-white text-sm" placeholder="Dải 0-360"/>
                  </div>
               </div>

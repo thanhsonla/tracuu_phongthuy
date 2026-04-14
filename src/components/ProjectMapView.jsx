@@ -173,6 +173,7 @@ export default function ProjectMapView({ projects, onOpenProject }) {
           <div style="display:flex;gap:8px;font-size:11px;">
             <span style="background:#e0e7ff;color:#4f46e5;padding:2px 8px;border-radius:6px;font-weight:700;">Vận ${p.period}</span>
             <span style="background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:6px;font-weight:700;">${p.degree}°</span>
+            ${p.buildArea ? `<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-weight:700;">${p.buildArea}m²</span>` : ''}
           </div>
           <p style="font-size:9px;color:#a78bfa;margin-top:6px;font-style:italic;">Kéo ghim để điều chỉnh vị trí</p>
         </div>
@@ -314,9 +315,10 @@ export default function ProjectMapView({ projects, onOpenProject }) {
               >
                 <p className="font-black text-sm text-slate-800 truncate">{p.projectName || p.clientName}</p>
                 <p className="text-[10px] text-slate-400 truncate mt-0.5">{p.address}</p>
-                <div className="flex gap-1.5 mt-1.5">
+                <div className="flex gap-1.5 mt-1.5 flex-wrap">
                   <span className="text-[9px] font-bold bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded">V{p.period}</span>
                   <span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">{p.degree}°</span>
+                  {p.buildArea && <span className="text-[9px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">{p.buildArea}m²</span>}
                 </div>
               </div>
             ))}
