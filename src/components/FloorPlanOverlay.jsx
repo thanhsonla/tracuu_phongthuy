@@ -58,7 +58,7 @@ const describeArc = (cx, cy, innerRadius, outerRadius, startAngle, endAngle) => 
 
 
 const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
-  const st = project.planOverlayState || {};
+  const st = project.details?.planOverlayState || project.planOverlayState || {};
   const [image, setImage] = useState(st.image || null);
   const [scale, setScale] = useState(st.scale || 1);
   const [rotation, setRotation] = useState(st.rotation || 0); // Chỉ Xoay bản vẽ theo [0, 90, 180, 270]

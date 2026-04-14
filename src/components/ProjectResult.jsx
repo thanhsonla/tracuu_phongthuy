@@ -542,7 +542,8 @@ const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProj
                 project={project} 
                 chartData={chartData}
                 onSaveOverlay={async (overlayState) => {
-                   const updatedProject = { ...project, planOverlayState: overlayState };
+                   const updatedDetails = { ...(project.details || {}), planOverlayState: overlayState };
+                   const updatedProject = { ...project, details: updatedDetails };
                    try {
                      await fetch(`/api/projects/${project.id}`, {
                        method: 'PUT',
