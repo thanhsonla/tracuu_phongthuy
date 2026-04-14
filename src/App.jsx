@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Compass, Clock, PlusCircle, Library as LibraryIcon, Ruler, LogOut, User as UserIcon } from 'lucide-react';
+import { Compass, Clock, PlusCircle, Library as LibraryIcon, Ruler, LogOut, User as UserIcon, MapPin } from 'lucide-react';
 import TimeStarTracker from './components/TimeStarTracker';
 import CreateProject from './components/CreateProject';
 import ProjectResult from './components/ProjectResult';
@@ -7,6 +7,7 @@ import Library from './components/Library';
 import LuBanRuler from './components/LuBanRuler';
 import AuthScreen from './components/AuthScreen';
 import AccountScreen from './components/AccountScreen';
+import ProjectMapView from './components/ProjectMapView';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('TRACKER');
@@ -102,6 +103,7 @@ export default function App() {
     { id: 'CREATE', label: 'Lập Dự Án', icon: PlusCircle, color: 'text-indigo-500' },
     { id: 'LUBAN', label: 'Thước Lỗ Ban', icon: Ruler, color: 'text-red-500' },
     { id: 'LIBRARY', label: 'Thư Viện', icon: LibraryIcon, color: 'text-emerald-500' },
+    { id: 'MAP_VIEW', label: 'Bản Đồ', icon: MapPin, color: 'text-violet-500' },
   ];
 
   let navItems = [];
@@ -242,6 +244,16 @@ export default function App() {
            )}
            
            {currentView === 'LUBAN' && <LuBanRuler />}
+
+            {currentView === 'MAP_VIEW' && (
+              <ProjectMapView
+                projects={projects}
+                onOpenProject={(p) => {
+                  setCurrentProject(p);
+                  setCurrentView('RESULT');
+                }}
+              />
+            )}
 
          </div>
       </main>

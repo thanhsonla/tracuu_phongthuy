@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
-import { Users, Home, Compass, ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Users, Home, Compass, ArrowLeft, Plus, Trash2, Save, MapPin, Navigation } from 'lucide-react';
 import { calculateMenhQuai, getPeriodFromYear } from '../utils/helpers';
 
 const CreateProject = ({ setView, projects, setProjects, setCurrentProject, currentProject }) => {
   const isEditMode = !!currentProject;
 
   const [formData, setFormData] = useState(() => {
-    if (currentProject) return { ...currentProject };
+    if (currentProject) return {
+      projectName: currentProject.projectName || '',
+      clientName: currentProject.clientName || '',
+      dob: currentProject.dob || '',
+      gender: currentProject.gender || 'Nam',
+      familyMembers: currentProject.familyMembers || [],
+      address: currentProject.address || '',
+      buildYear: currentProject.buildYear || currentProject.yearBuilt || new Date().getFullYear(),
+      degree: currentProject.degree || 180,
+      designReq: currentProject.designReq || '',
+      loanDau: currentProject.loanDau || '',
+    };
     return {
       projectName: '',
       clientName: '', dob: '', gender: 'Nam', 
@@ -15,6 +26,15 @@ const CreateProject = ({ setView, projects, setProjects, setCurrentProject, curr
       degree: 180, designReq: '', loanDau: ''
     };
   });
+
+  // === GPS / Mini-Map State ===
+  const [showMiniMap, setShowMiniMap] = useState(false);
+  const [gpsLat, setGpsLat] = useState(currentProject?.details?.mapCoords?.lat || '');
+  const [gpsLng, setGpsLng] = useState(currentProject?.details?.mapCoords?.lng || '');
+  const [geocoding, setGeocoding] = useState(false);
+  const miniMapRef = useRef(null);
+  const miniMapInstanceRef = useRef(null);
+  const miniMarkerRef = useRef(null);
 
   const handleAddMember = () => {
     setFormData({
@@ -39,7 +59,7 @@ const CreateProject = ({ setView, projects, setProjects, setCurrentProject, curr
     e.preventDefault();
     if (!formData.clientName) { alert('Vui lòng nhập họ tên gia chủ'); return; }
     
-    const menhQuai = calculateMenhQuai(formData.dob, formData.gender);
+    const menhQuai = formData.dob ? calculateMenhQuai(formData.dob, formData.gender) : (currentProject?.menhQuai || 'Chưa xác định');
     const period = getPeriodFromYear(formData.buildYear);
     
     // Tự động suy ra Ngũ Hành Dụng Thần từ Mệnh Quái (Ví dụ 'Khảm (Thủy)' -> 'Thủy')
@@ -47,7 +67,7 @@ const CreateProject = ({ setView, projects, setProjects, setCurrentProject, curr
     const dungThan = match ? match[1] : 'Chưa xác định';
     
     // Clean empty members
-    const cleanedMembers = formData.familyMembers.filter(m => m.name.trim() !== '');
+    const cleanedMembers = (formData.familyMembers || []).filter(m => m.name && m.name.trim() !== '');
     
     const newProject = {
        ...formData, 
@@ -55,6 +75,10 @@ const CreateProject = ({ setView, projects, setProjects, setCurrentProject, curr
        familyMembers: cleanedMembers,
        notes: currentProject ? currentProject.notes : [],
        analysis: currentProject ? currentProject.analysis : {},
+       details: {
+         ...(currentProject?.details || {}),
+         mapCoords: (gpsLat && gpsLng) ? { lat: parseFloat(gpsLat), lng: parseFloat(gpsLng) } : (currentProject?.details?.mapCoords || null)
+       },
        id: currentProject ? currentProject.id : Date.now(), 
        menhQuai, dungThan, period, degree: parseFloat(formData.degree)
     };
@@ -184,7 +208,29 @@ const CreateProject = ({ setView, projects, setProjects, setCurrentProject, curr
               <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr] gap-4">
                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase">Địa chỉ Công trình</label>
-                    <input type="text" value={formData.address} onChange={e=>setFormData({...formData, address: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium bg-white text-sm text-slate-800" placeholder="Số nhà, đường, quận/huyện..."/>
+                    <div className="flex gap-2">
+                       <input type="text" value={formData.address} onChange={e=>setFormData({...formData, address: e.target.value})} className="flex-1 px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-medium bg-white text-sm text-slate-800" placeholder="Số nhà, đường, quận/huyện..."/>
+                       <button type="button" onClick={async () => {
+                          if (!formData.address || formData.address.trim().length < 3) { alert('Vui lòng nhập địa chỉ trước'); return; }
+                          setGeocoding(true);
+                          try {
+                            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.address)}&limit=1`;
+                            const res = await fetch(url, { headers: { 'Accept-Language': 'vi' } });
+                            const data = await res.json();
+                            if (data.length > 0) {
+                              setGpsLat(parseFloat(data[0].lat).toFixed(6));
+                              setGpsLng(parseFloat(data[0].lon).toFixed(6));
+                              setShowMiniMap(true);
+                            } else {
+                              alert('Không tìm thấy tọa độ cho địa chỉ này. Hãy chọn thủ công trên bản đồ.');
+                              setShowMiniMap(true);
+                            }
+                          } catch(e) { alert('Lỗi kết nối mạng.'); }
+                          setGeocoding(false);
+                       }} disabled={geocoding} className="shrink-0 bg-violet-600 hover:bg-violet-700 text-white px-3 py-2.5 rounded-lg font-bold text-xs flex items-center gap-1 transition disabled:opacity-50">
+                         <MapPin size={14}/> {geocoding ? 'Đang tìm...' : 'Định vị'}
+                       </button>
+                     </div>
                  </div>
                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase">Năm Xây *</label>
@@ -195,6 +241,34 @@ const CreateProject = ({ setView, projects, setProjects, setCurrentProject, curr
                     <input type="number" required min="0" max="360" step="0.1" value={formData.degree} onChange={e=>setFormData({...formData, degree: e.target.value})} className="w-full px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:border-indigo-500 outline-none font-black text-indigo-700 bg-white text-sm" placeholder="Dải 0-360"/>
                  </div>
               </div>
+
+              {/* GPS Coordinates */}
+              <div className="mt-3 flex flex-wrap items-end gap-3">
+                  <div className="space-y-1">
+                     <label className="text-[10px] font-bold text-slate-400 uppercase">Vĩ độ (Lat)</label>
+                     <input type="number" step="0.000001" value={gpsLat} onChange={e => setGpsLat(e.target.value)} className="w-36 px-2 py-1.5 rounded-lg border border-slate-200 focus:border-violet-500 outline-none text-xs font-mono text-slate-700 bg-white" placeholder="VD: 10.7769"/>
+                  </div>
+                  <div className="space-y-1">
+                     <label className="text-[10px] font-bold text-slate-400 uppercase">Kinh độ (Lng)</label>
+                     <input type="number" step="0.000001" value={gpsLng} onChange={e => setGpsLng(e.target.value)} className="w-36 px-2 py-1.5 rounded-lg border border-slate-200 focus:border-violet-500 outline-none text-xs font-mono text-slate-700 bg-white" placeholder="VD: 106.7009"/>
+                  </div>
+                  <button type="button" onClick={() => setShowMiniMap(!showMiniMap)} className="text-xs font-bold text-violet-600 bg-violet-50 border border-violet-200 px-3 py-1.5 rounded-lg hover:bg-violet-100 transition flex items-center gap-1">
+                     <Navigation size={12}/> {showMiniMap ? 'Ẩn bản đồ' : 'Mở bản đồ'}
+                  </button>
+               </div>
+
+               {/* Mini Map */}
+               {showMiniMap && (
+                  <MiniMapPicker
+                     lat={gpsLat ? parseFloat(gpsLat) : 16.0}
+                     lng={gpsLng ? parseFloat(gpsLng) : 106.0}
+                     zoom={gpsLat ? 16 : 6}
+                     onSelect={(lat, lng) => {
+                        setGpsLat(lat.toFixed(6));
+                        setGpsLng(lng.toFixed(6));
+                     }}
+                  />
+               )}
 
               <div className="space-y-1.5 mt-2">
                  <label className="text-xs font-bold text-slate-500 uppercase">Yêu cầu thiết kế</label>
@@ -217,5 +291,81 @@ const CreateProject = ({ setView, projects, setProjects, setCurrentProject, curr
     </div>
   );
 };
+
+// =============================================
+// MINI MAP PICKER (Leaflet CDN)
+// =============================================
+function MiniMapPicker({ lat, lng, zoom, onSelect }) {
+  const containerRef = useRef(null);
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+
+  useEffect(() => {
+    // Load Leaflet dynamically
+    const loadLeaflet = () => {
+      return new Promise((resolve) => {
+        if (window.L) { resolve(window.L); return; }
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.onload = () => resolve(window.L);
+        document.head.appendChild(script);
+      });
+    };
+
+    loadLeaflet().then(L => {
+      if (!containerRef.current || mapRef.current) return;
+      const map = L.map(containerRef.current, {
+        center: [lat, lng],
+        zoom: zoom,
+      });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+        maxZoom: 19,
+      }).addTo(map);
+
+      const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+      marker.on('dragend', () => {
+        const pos = marker.getLatLng();
+        onSelect(pos.lat, pos.lng);
+      });
+
+      map.on('click', (e) => {
+        marker.setLatLng(e.latlng);
+        onSelect(e.latlng.lat, e.latlng.lng);
+      });
+
+      mapRef.current = map;
+      markerRef.current = marker;
+    });
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update marker when lat/lng props change from parent
+  useEffect(() => {
+    if (markerRef.current && mapRef.current && lat && lng) {
+      markerRef.current.setLatLng([lat, lng]);
+      mapRef.current.setView([lat, lng], zoom || 16);
+    }
+  }, [lat, lng]);
+
+  return (
+    <div className="mt-3 rounded-xl border border-violet-200 overflow-hidden shadow-sm">
+      <div ref={containerRef} style={{ height: '280px', width: '100%' }} />
+      <p className="text-[10px] text-violet-500 font-medium text-center py-1.5 bg-violet-50">
+        Click hoặc kéo ghim để chọn vị trí chính xác
+      </p>
+    </div>
+  );
+}
 
 export default CreateProject;
