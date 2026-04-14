@@ -538,7 +538,27 @@ const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProj
         {/* --- KHU VỰC PHÂN TÍCH: ÁP BẢN VẼ --- */}
         {activeTab === 'MAT_BANG' && (
            <div className="mt-6 animate-slide-up">
-              <FloorPlanOverlay project={project} chartData={chartData} />
+              <FloorPlanOverlay 
+                project={project} 
+                chartData={chartData}
+                onSaveOverlay={async (overlayState) => {
+                   const updatedProject = { ...project, planOverlayState: overlayState };
+                   try {
+                     await fetch(`/api/projects/${project.id}`, {
+                       method: 'PUT',
+                       headers: { 'Content-Type': 'application/json' },
+                       body: JSON.stringify(updatedProject)
+                     });
+                     setCurrentProject(updatedProject);
+                     const updatedProjects = projects.map(p => p.id === project.id ? updatedProject : p);
+                     setProjects(updatedProjects);
+                     alert('Đã lưu dữ liệu bản vẽ La Kinh và điểm định tâm vào hồ sơ dự án!');
+                   } catch (err) {
+                     console.error('Lỗi lưu overlay:', err);
+                     alert('Có lỗi khi lưu dữ liệu bản vẽ.');
+                   }
+                }}
+              />
            </div>
         )}
 

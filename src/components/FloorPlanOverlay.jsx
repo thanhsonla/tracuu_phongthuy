@@ -57,20 +57,21 @@ const describeArc = (cx, cy, innerRadius, outerRadius, startAngle, endAngle) => 
 };
 
 
-const FloorPlanOverlay = ({ project, chartData }) => {
-  const [image, setImage] = useState(null);
-  const [scale, setScale] = useState(1);
-  const [rotation, setRotation] = useState(0); // Chỉ Xoay bản vẽ theo [0, 90, 180, 270]
-  const [compassRotation, setCompassRotation] = useState(0); // Góc Xoay chủ động La Kinh
-  const [posX, setPosX] = useState(0);
-  const [posY, setPosY] = useState(0);
-  const [overlayOpacity, setOverlayOpacity] = useState(1);
+const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
+  const st = project.planOverlayState || {};
+  const [image, setImage] = useState(st.image || null);
+  const [scale, setScale] = useState(st.scale || 1);
+  const [rotation, setRotation] = useState(st.rotation || 0); // Chỉ Xoay bản vẽ theo [0, 90, 180, 270]
+  const [compassRotation, setCompassRotation] = useState(st.compassRotation || 0); // Góc Xoay chủ động La Kinh
+  const [posX, setPosX] = useState(st.posX || 0);
+  const [posY, setPosY] = useState(st.posY || 0);
+  const [overlayOpacity, setOverlayOpacity] = useState(st.overlayOpacity !== undefined ? st.overlayOpacity : 1);
   const exportRef = useRef(null);
 
   // === CENTROID POLYGON FEATURE ===
   const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [polyPoints, setPolyPoints] = useState([]);
-  const [computedCentroid, setComputedCentroid] = useState(null);
+  const [polyPoints, setPolyPoints] = useState(st.polyPoints || []);
+  const [computedCentroid, setComputedCentroid] = useState(st.computedCentroid || null);
 
   const calculateCentroid = () => {
     if (polyPoints.length < 3) {
@@ -479,6 +480,9 @@ const FloorPlanOverlay = ({ project, chartData }) => {
             <>
               <button onClick={() => setImage(null)} className="px-4 py-2.5 rounded-xl font-black text-sm text-rose-600 bg-rose-50 hover:bg-rose-100 flex items-center gap-2 transition-colors">
                 <Trash2 size={18} /> Xóa ảnh
+              </button>
+              <button onClick={() => onSaveOverlay && onSaveOverlay({ image, scale, rotation, compassRotation, posX, posY, overlayOpacity, polyPoints, computedCentroid })} className="px-4 py-2.5 rounded-xl font-black text-sm text-emerald-700 bg-emerald-50 hover:bg-emerald-100 flex items-center gap-2 transition-colors border border-emerald-200">
+                Lưu Khớp Nối
               </button>
               <button onClick={saveImage} className="px-4 py-2.5 rounded-xl font-black text-sm text-white bg-indigo-600 hover:bg-indigo-700 flex items-center gap-2 transition-colors shadow-md">
                 <Download size={18} /> Lưu PDF/Ảnh
