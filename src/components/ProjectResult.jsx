@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { ArrowLeft, User, MapPin, FileText, Mountain, Compass, Navigation, Map, AlertTriangle, Info, CheckCircle, Star, Sparkles, X, Clock, Calendar, Plus, Activity, Save, Edit, Download, Loader, TrendingUp } from 'lucide-react';
 import { analyzeLine, findMountainForStar, flyStar } from '../services/GridGeneratorService';
 import { analyzeFormations, generateRemedies } from '../services/StarAnalysisService';
-import { MOUNTAINS, REPLACEMENT_STARS, VIEW_PERMUTATIONS, LABELS, trigramToGridIndex, getCombinationDesc } from '../data/constants';
+import { MOUNTAINS, REPLACEMENT_STARS, VIEW_PERMUTATIONS, LABELS, trigramToGridIndex, getCombinationDesc, getLocalYMD } from '../data/constants';
 import { getStarColor, getElementBgColor, getTimeStars } from '../utils/helpers';
 import DynamicCompass from './DynamicCompass';
 import FloorPlanOverlay from './FloorPlanOverlay';
@@ -141,7 +141,7 @@ const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProj
     if (!newNote.trim() || !projects) return;
     const updatedProject = {
       ...project,
-      notes: [...(project.notes || []), { date: new Date().toISOString(), text: newNote.trim() }]
+      notes: [...(project.notes || []), { date: getLocalYMD(), text: newNote.trim() }]
     };
     
     try {

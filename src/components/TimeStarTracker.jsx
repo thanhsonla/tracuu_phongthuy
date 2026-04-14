@@ -3,9 +3,10 @@ import { Clock, Search, CalendarDays, ChevronDown, ChevronUp, Star, UserCheck } 
 import { getTimeStars, getStarColor, getHourlyStars, THOI_THAN, getCanChiElements, evaluateDungThan } from '../utils/helpers';
 import { flyStar } from '../services/GridGeneratorService';
 import { getMaiHoaGua } from '../data/maiHoa';
-import { VIEW_PERMUTATIONS, LABELS, STAR_PROPERTIES, formatDateDMY } from '../data/constants';
+import { VIEW_PERMUTATIONS, LABELS, STAR_PROPERTIES, formatDateDMY, getLocalYMD } from '../data/constants';
 import { Solar, Lunar } from 'lunar-javascript';
 import DayAnalysisPanel from './DayAnalysisPanel';
+import SolarTermsCalendar from './SolarTermsCalendar';
 
 const SOLAR_HOLIDAYS = ['01/01', '30/04', '01/05', '02/09'];
 const LUNAR_HOLIDAYS = ['01/01', '02/01', '03/01', '04/01', '10/03'];
@@ -130,7 +131,7 @@ const HourlyRowBar = ({ dateStr, selectedStartH, fsMonth, yearGZ, lunarMonth, lu
   const dungThan = projectContext?.dungThan;
   
   // Xác định ngày hiện tại và giờ hiện tại
-  const isTodayDate = new Date().toISOString().split('T')[0] === dateStr;
+  const isTodayDate = getLocalYMD(new Date()) === dateStr;
   const nowH = new Date().getHours();
 
   return (
@@ -344,7 +345,7 @@ const TrackerResultCard = ({ dateObj, data, searchTargetStar, searchDirection, p
       <div className="border-t border-slate-100 bg-white p-3 md:p-4">
          <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">Canh Giờ</p>
          <HourlyRowBar 
-           dateStr={dateObj.toISOString().split('T')[0]} 
+           dateStr={getLocalYMD(dateObj)} 
            fsMonth={data.fsMonth} 
            yearGZ={data.yearGZ} 
            lunarMonth={data.lunarMonth} 
@@ -373,7 +374,7 @@ const MiniCalendar = ({ selectedDateStr, onSelect }) => {
   for (let i = 0; i < padDays; i++) days.push(null);
   for (let i = 1; i <= daysInMonth; i++) days.push(i);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalYMD(new Date());
 
   return (
     <div className="bg-slate-900 border border-slate-700/50 p-4 rounded-2xl w-full mx-auto select-none shadow-inner">
@@ -401,7 +402,7 @@ const MiniCalendar = ({ selectedDateStr, onSelect }) => {
          {days.map((d, i) => {
            if (!d) return <div key={i} className="py-2" />;
            const currentCellDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), d, 12, 0, 0);
-           const currentCellStr = currentCellDate.toISOString().split('T')[0];
+           const currentCellStr = getLocalYMD(currentCellDate);
            const isSelected = selectedDateStr === currentCellStr;
            const isToday = todayStr === currentCellStr;
            
@@ -463,7 +464,7 @@ const TodayWidget = ({ projectContext }) => {
     const checkDate = new Date(now);
     checkDate.setHours(12, 0, 0, 0); 
     return getTimeStars(checkDate);
-  }, [now.toISOString().split('T')[0]]);
+  }, [getLocalYMD(now)]);
 
   return (
     <div className="animate-fade-in animate-slide-in-right w-full mb-4">
@@ -478,7 +479,7 @@ const TimeStarTracker = ({ projectContext }) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [useJieQiMonth, setUseJieQiMonth] = useState(false);
-  const [selectedDateStr, setSelectedDateStr] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDateStr, setSelectedDateStr] = useState(getLocalYMD());
   
   const hasDungThan = projectContext?.dungThan && projectContext?.dungThan !== 'Chưa xác định';
 
@@ -577,6 +578,7 @@ const TimeStarTracker = ({ projectContext }) => {
     { id: 'day',    label: 'Ngày',    color: 'bg-indigo-600' },
     { id: 'hour',   label: 'Giờ',     color: 'bg-indigo-600' },
     { id: 'search', label: '🔍 Truy Vấn', color: 'bg-amber-600' },
+    { id: 'tietKhi', label: '☀️ Tiết Khí', color: 'bg-orange-600' },
   ];
 
   return (
@@ -819,6 +821,12 @@ const TimeStarTracker = ({ projectContext }) => {
             )}
           </div>
 
+        </div>
+      )}
+
+      {activeTab === 'tietKhi' && (
+        <div className="px-4 md:px-0 animate-slide-up">
+          <SolarTermsCalendar />
         </div>
       )}
 

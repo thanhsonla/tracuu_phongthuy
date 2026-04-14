@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas-pro';
+import { getLocalYMD } from '../data/constants';
 
 // ====== CONSTANTS ======
 const A4_W = 210;
@@ -507,7 +508,7 @@ export const generatePdfReport = async ({ project, chartData, customAnalysis, re
 
   // ==================== SAVE ====================
   const safeName = pName.replace(/[^a-zA-Z0-9\u00C0-\u024F\u1E00-\u1EFF\s]/g, '').replace(/\s+/g, '_').substring(0, 40);
-  const ds = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const ds = getLocalYMD().replace(/-/g, '');
   doc.save(`BaoCao_${safeName}_${ds}.pdf`);
 
   return true;

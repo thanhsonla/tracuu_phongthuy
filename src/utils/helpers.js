@@ -115,13 +115,14 @@ export const getHourlyStars = (dateStr) => {
     // Thời gian chuẩn để check sao của khung giờ này
     const testHour = t.startH === 23 ? 0 : t.startH + 1;
     const testD = new Date(baseD);
-    testD.setHours(testHour, 15, 0); // cộng 15 phút để ở giữa khung giờ (ví dụ Tý -> 0h15, Sửu -> 2h15)
+    testD.setHours(testHour, 15, 0); // cộng 15 phút để ở giữa khung giờ
 
     const timeSolar = Solar.fromDate(testD);
     const timeLunar = Lunar.fromSolar(timeSolar);
     const star = starMap[timeLunar.getTimeNineStar().getNumber()] || 1;
-    const hourGZ = translateGanZhi(timeLunar.getTimeInGanZhi());
     
+    // Sử dụng thư viện để tính Can Giờ chính xác (đã bao gồm giao ca giờ Tý sang ngày hôm sau)
+    const hourGZ = translateGanZhi(timeLunar.getTimeInGanZhi());
     const hdInfo = hdHours.find(h => h.name === t.name) || {};
 
     return { ...t, centerStar: star, ...hdInfo, hourGZ };
