@@ -24,7 +24,9 @@ window.fetch = async (...args) => {
              'Authorization': `Bearer ${token}`
            }
         } else {
+           const isJson = args[1].body && typeof args[1].body === 'string';
            args[1].headers = {
+             ...(isJson ? { 'Content-Type': 'application/json' } : {}),
              ...args[1].headers,
              'Authorization': `Bearer ${token}`
            }

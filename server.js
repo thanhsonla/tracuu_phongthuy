@@ -37,7 +37,7 @@ let supabase = null;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
-const isCloud = !!(SUPABASE_URL && SUPABASE_KEY);
+let isCloud = !!(SUPABASE_URL && SUPABASE_KEY);
 
 const docsDir = path.resolve(__dirname, 'src/data/docs');
 
@@ -49,6 +49,7 @@ if (isCloud) {
      console.error("LỖI KHI KẾT NỐI SUPABASE. Kích hoạt mây hóa thất bại:", e);
      // Đè về local để không sập server
      supabase = null; 
+     isCloud = false;
   }
 } 
 
