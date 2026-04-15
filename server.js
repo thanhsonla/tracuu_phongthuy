@@ -135,11 +135,21 @@ if (!supabase) {
       path TEXT UNIQUE NOT NULL,
       type TEXT NOT NULL,
       content TEXT,
+      mime_type TEXT DEFAULT 'text/markdown',
       size INTEGER DEFAULT 0,
       createdAt TEXT DEFAULT (datetime('now','localtime')),
       updatedAt TEXT DEFAULT (datetime('now','localtime'))
     )
   `);
+
+    // Migration: thêm cột mime_type nếu chưa có
+    try {
+      const docInfo = dbLocal.prepare("PRAGMA table_info(documents)").all();
+      if (docInfo.length > 0 && !docInfo.find(c => c.name === 'mime_type')) {
+        dbLocal.exec("ALTER TABLE documents ADD COLUMN mime_type TEXT DEFAULT 'text/markdown'");
+        console.log('Migrated SQLite: Added mime_type to documents');
+      }
+    } catch(e) { }
     }
   }
 }
@@ -147,6 +157,9 @@ if (!supabase) {
 // ======================================================================
 // DATABASE ADAPTER (CẦU NỐI 2 MÔI TRƯỜNG)
 // ======================================================================
+// Cache trạng thái cột mime_type trên Supabase (null = chưa biết, true/false)
+let mimeTypeColExists = null;
+
 const DB = {
   async getProjects() {
     if (isCloud) {
@@ -237,28 +250,40 @@ const DB = {
 
   async getTreeNodes() {
     if (isCloud) {
-      const { data, error } = await supabase.from('documents').select('path, type, size').order('path', { ascending: true });
+      // Thử query với mime_type trước, nếu lỗi 42703 (cột chưa tồn tại) thì dùng query cũ
+      let { data, error } = await supabase.from('documents').select('path, type, size, mime_type').order('path', { ascending: true });
+      if (error && error.code === '42703') {
+        console.warn('⚠️  mime_type column missing on Supabase - running without it. Please run migration.');
+        const fallback = await supabase.from('documents').select('path, type, size').order('path', { ascending: true });
+        error = fallback.error;
+        data = (fallback.data || []).map(r => ({ ...r, mime_type: 'text/markdown' }));
+      }
       if (error) throw error;
       return data;
     } else {
-      return dbLocal.prepare('SELECT path, type, size FROM documents ORDER BY path ASC').all();
+      return dbLocal.prepare('SELECT path, type, size, mime_type FROM documents ORDER BY path ASC').all();
     }
   },
 
   async getFileContent(dbPath) {
     if (isCloud) {
-      const { data, error } = await supabase.from('documents').select('content').eq('path', dbPath).eq('type', 'file').single();
-      if (error && error.code !== 'PGRST116') throw error; // ignore no rows
-      return data ? data.content : null;
+      let { data, error } = await supabase.from('documents').select('content, mime_type').eq('path', dbPath).eq('type', 'file').single();
+      if (error && error.code === '42703') {
+        console.warn('⚠️  mime_type column missing on Supabase - fallback to content only.');
+        const fallback = await supabase.from('documents').select('content').eq('path', dbPath).eq('type', 'file').single();
+        error = fallback.error;
+        data = fallback.data ? { ...fallback.data, mime_type: 'text/markdown' } : null;
+      }
+      if (error && error.code !== 'PGRST116') throw error;
+      return data || null;
     } else {
-      const row = dbLocal.prepare('SELECT content FROM documents WHERE path=? AND type=?').get(dbPath, 'file');
-      return row ? row.content : null;
+      return dbLocal.prepare('SELECT content, mime_type FROM documents WHERE path=? AND type=?').get(dbPath, 'file') || null;
     }
   },
 
   async isDocumentExists(dbPath) {
     if (isCloud) {
-      const { data, error } = await supabase.from('documents').select('path').eq('path', dbPath).single();
+      const { data } = await supabase.from('documents').select('path').eq('path', dbPath).single();
       return !!data;
     } else {
       return !!dbLocal.prepare('SELECT path FROM documents WHERE path=?').get(dbPath);
@@ -274,17 +299,31 @@ const DB = {
     }
   },
 
-  async upsertFileContent(dbPath, content, size) {
+  async upsertFileContent(dbPath, content, size, mimeType = 'text/markdown') {
     const exists = await this.isDocumentExists(dbPath);
     if (isCloud) {
-      const payload = { id: dbPath, path: dbPath, type: 'file', content, size, updatedAt: new Date().toISOString() };
-      const { error } = await supabase.from('documents').upsert([payload]);
-      if (error) throw error;
+      // Thử với mime_type trước (nếu cột đã tồn tại)
+      if (mimeTypeColExists !== false) {
+        const payload = { id: dbPath, path: dbPath, type: 'file', content, size, mime_type: mimeType, updatedAt: new Date().toISOString() };
+        const { error } = await supabase.from('documents').upsert([payload]);
+        if (!error) {
+          mimeTypeColExists = true; // Cache: cột tồn tại
+          return;
+        }
+        if (error.code !== '42703') throw error; // Lỗi khác thì throw
+        // Lỗi 42703 = cột chưa tồn tại, fallback
+        mimeTypeColExists = false;
+        console.warn('⚠️  mime_type column missing on Supabase - saving without it. Run migration to enable image/PDF storage.');
+      }
+      // Fallback: lưu không có mime_type (chỉ dành cho text/markdown)
+      const fallbackPayload = { id: dbPath, path: dbPath, type: 'file', content, size, updatedAt: new Date().toISOString() };
+      const { error: fallbackErr } = await supabase.from('documents').upsert([fallbackPayload]);
+      if (fallbackErr) throw fallbackErr;
     } else {
       if (exists) {
-        dbLocal.prepare('UPDATE documents SET content=?, size=?, updatedAt=datetime("now","localtime") WHERE path=?').run(content, size, dbPath);
+        dbLocal.prepare('UPDATE documents SET content=?, size=?, mime_type=?, updatedAt=datetime("now","localtime") WHERE path=?').run(content, size, mimeType, dbPath);
       } else {
-        dbLocal.prepare('INSERT INTO documents (id, path, type, content, size) VALUES (?, ?, ?, ?, ?)').run(dbPath, dbPath, 'file', content, size);
+        dbLocal.prepare('INSERT INTO documents (id, path, type, content, size, mime_type) VALUES (?, ?, ?, ?, ?, ?)').run(dbPath, dbPath, 'file', content, size, mimeType);
       }
     }
   },
@@ -693,9 +732,22 @@ app.get('/api/docs/list', authenticateToken, async (req, res) => {
 app.get('/api/docs/content', authenticateToken, async (req, res) => {
   try {
     if (!req.query.path) return res.status(400).send('Missing path');
-    const content = await DB.getFileContent(req.query.path.replace(/\\/g, '/'));
-    if (content !== null) res.type('text/plain').send(content);
+    const row = await DB.getFileContent(req.query.path.replace(/\\/g, '/'));
+    if (row !== null) res.type('text/plain').send(row.content || '');
     else res.status(404).send('File not found');
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Trả về file binary (ảnh, PDF) dưới dạng base64 data URL
+app.get('/api/docs/binary', authenticateToken, async (req, res) => {
+  try {
+    if (!req.query.path) return res.status(400).send('Missing path');
+    const row = await DB.getFileContent(req.query.path.replace(/\\/g, '/'));
+    if (!row) return res.status(404).send('File not found');
+    // content là chuỗi base64, mime_type là loại MIME
+    res.json({ content: row.content, mimeType: row.mime_type || 'application/octet-stream' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -743,7 +795,30 @@ app.post('/api/docs/save-text', authenticateToken, async (req, res) => {
 });
 
 import os from 'os';
-const upload = multer({ dest: path.join(os.tmpdir(), 'uploads_temp') });
+
+// Bảng MIME type
+const MIME_MAP = {
+  '.md':   'text/markdown',
+  '.txt':  'text/plain',
+  '.doc':  'application/msword',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.pdf':  'application/pdf',
+  '.jpg':  'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png':  'image/png',
+  '.gif':  'image/gif',
+  '.webp': 'image/webp',
+  '.svg':  'image/svg+xml',
+};
+
+const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']);
+const BINARY_EXTS = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']);
+
+const upload = multer({
+  dest: path.join(os.tmpdir(), 'uploads_temp'),
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB per file
+});
+
 app.post('/api/docs/upload', authenticateToken, upload.array('files'), async (req, res) => {
   try {
     if (!req.user.permissions?.LIBRARY && req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Không có quyền thêm tài liệu' });
@@ -753,26 +828,46 @@ app.post('/api/docs/upload', authenticateToken, upload.array('files'), async (re
     
     const results = [];
     for (const file of (req.files || [])) {
-      const originalName = file.originalname || 'upload.md';
+      const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8') || 'upload.md';
       const baseName = path.parse(originalName).name;
       const ext = path.extname(originalName).toLowerCase();
-      
-      const destFileName = `${baseName}.md`;
-      const dbPath = destFolder ? `${destFolder}/${destFileName}` : destFileName;
+      const mimeType = MIME_MAP[ext] || 'application/octet-stream';
 
-      let markdownContent = '';
+      let destFileName, dbPath, savedContent, savedSize;
+
       if (ext === '.docx' || ext === '.doc') {
+        // Word → chuyển sang Markdown
         const buffer = fs.readFileSync(file.path);
         const result = await mammoth.convertToHtml({ buffer });
         const turndownService = new TurndownService({ headingStyle: 'atx' });
-        markdownContent = turndownService.turndown(result.value);
-      } else if (ext === '.md' || ext === '.txt') {
-        markdownContent = fs.readFileSync(file.path, 'utf8');
+        const markdownContent = turndownService.turndown(result.value);
+        destFileName = `${baseName}.md`;
+        dbPath = destFolder ? `${destFolder}/${destFileName}` : destFileName;
+        savedContent = markdownContent;
+        savedSize = Buffer.byteLength(markdownContent, 'utf8');
+        await DB.upsertFileContent(dbPath, savedContent, savedSize, 'text/markdown');
+
+      } else if (BINARY_EXTS.has(ext)) {
+        // Ảnh / PDF → lưu Base64
+        const buffer = fs.readFileSync(file.path);
+        const base64 = buffer.toString('base64');
+        destFileName = originalName; // giữ nguyên tên + đuôi gốc
+        dbPath = destFolder ? `${destFolder}/${destFileName}` : destFileName;
+        savedContent = base64;
+        savedSize = buffer.length;
+        await DB.upsertFileContent(dbPath, savedContent, savedSize, mimeType);
+
+      } else {
+        // .md / .txt → lưu text
+        const textContent = fs.readFileSync(file.path, 'utf8');
+        destFileName = `${baseName}.md`;
+        dbPath = destFolder ? `${destFolder}/${destFileName}` : destFileName;
+        savedContent = textContent;
+        savedSize = Buffer.byteLength(textContent, 'utf8');
+        await DB.upsertFileContent(dbPath, savedContent, savedSize, 'text/markdown');
       }
 
-      await DB.upsertFileContent(dbPath, markdownContent, Buffer.byteLength(markdownContent, 'utf8'));
       if (destFolder) await DB.insertFolder(destFolder);
-      
       results.push(destFileName);
       if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
     }

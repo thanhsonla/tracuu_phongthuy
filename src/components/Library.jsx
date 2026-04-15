@@ -1,7 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { BookOpen, Database, Folder, FolderOpen, FileText, File, Plus, Search, Upload, PlusSquare, Home, MapPin, Trash2, RefreshCw, X, ChevronRight, ChevronDown, Clock } from 'lucide-react';
+import { BookOpen, Database, Folder, FolderOpen, FileText, File, Plus, Search, Upload, PlusSquare, Home, MapPin, Trash2, RefreshCw, X, ChevronRight, ChevronDown, Clock, Image, FileImage, ZoomIn, ZoomOut, Download, ExternalLink } from 'lucide-react';
+
+// ===== UTILITIES =====
+const getFileExt = (name = '') => name.split('.').pop().toLowerCase();
+
+const getFileType = (node) => {
+  const mime = node.mime_type || '';
+  const ext = getFileExt(node.name);
+  if (mime.startsWith('image/') || ['jpg','jpeg','png','gif','webp','svg'].includes(ext)) return 'image';
+  if (mime === 'application/pdf' || ext === 'pdf') return 'pdf';
+  return 'markdown';
+};
+
+const FileIcon = ({ node, size = 14 }) => {
+  const type = getFileType(node);
+  if (type === 'image') return <Image size={size} className="text-emerald-400" />;
+  if (type === 'pdf')   return <FileText size={size} className="text-red-400" />;
+  return <FileText size={size} className="text-indigo-400" />;
+};
+
+const getDisplayName = (node) => {
+  const type = getFileType(node);
+  if (type === 'markdown') return node.name.replace(/\.md$/, '');
+  return node.name;
+};
+
+const formatFileSize = (bytes) => {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024*1024) return `${(bytes/1024).toFixed(1)} KB`;
+  return `${(bytes/(1024*1024)).toFixed(1)} MB`;
+};
 
 // ===== HUYỀN KHÔNG CÁC =====
 const TreeNode = ({ node, level, selectedPath, onSelect, expandedFolders, toggleFolder, onDelete, isAdmin }) => {
@@ -27,8 +58,8 @@ const TreeNode = ({ node, level, selectedPath, onSelect, expandedFolders, toggle
         ) : (
           <>
             <div className="w-3.5" />{/* Spacer for alignment without chevron */}
-            <FileText size={14} className="text-indigo-400" />
-            <span className="flex-1 truncate">{node.name.replace('.md', '')}</span>
+            <FileIcon node={node} size={14} />
+            <span className="flex-1 truncate">{getDisplayName(node)}</span>
           </>
         )}
         
@@ -57,6 +88,9 @@ const HuyenKhongCac = ({ currentUser }) => {
   const [tree, setTree] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileContent, setFileContent] = useState('');
+  const [fileMime, setFileMime] = useState('text/markdown');
+  const [binaryDataUrl, setBinaryDataUrl] = useState(null);
+  const [imgZoom, setImgZoom] = useState(1);
   const [expandedFolders, setExpandedFolders] = useState(new Set());
   const [searchText, setSearchText] = useState('');
   
@@ -72,7 +106,10 @@ const HuyenKhongCac = ({ currentUser }) => {
 
   const fetchTree = async () => {
     try {
-      const res = await fetch('/api/docs/list');
+      const token = localStorage.getItem('hkpt_token');
+      const res = await fetch('/api/docs/list', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
       const data = await res.json();
       setTree(data);
     } catch (e) { console.error('Fetch tree error:', e); }
@@ -83,10 +120,32 @@ const HuyenKhongCac = ({ currentUser }) => {
   const handleSelect = async (node) => {
     if (node.type === 'file') {
       setSelectedFile(node);
+      setFileContent('');
+      setBinaryDataUrl(null);
+      setImgZoom(1);
+      const fileType = getFileType(node);
       try {
-        const res = await fetch(`/api/docs/content?path=${encodeURIComponent(node.path)}`);
-        const text = await res.text();
-        setFileContent(text);
+        if (fileType === 'image' || fileType === 'pdf') {
+          // Lấy base64 từ binary endpoint
+          const token = localStorage.getItem('hkpt_token');
+          const res = await fetch(`/api/docs/binary?path=${encodeURIComponent(node.path)}`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const dataUrl = `data:${data.mimeType};base64,${data.content}`;
+            setBinaryDataUrl(dataUrl);
+            setFileMime(data.mimeType);
+          }
+        } else {
+          const token = localStorage.getItem('hkpt_token');
+          const res = await fetch(`/api/docs/content?path=${encodeURIComponent(node.path)}`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          });
+          const text = await res.text();
+          setFileContent(text);
+          setFileMime('text/markdown');
+        }
       } catch (e) {
         setFileContent('Lỗi khi tải file.');
       }
@@ -133,10 +192,15 @@ const HuyenKhongCac = ({ currentUser }) => {
   const displayTree = filterTree(tree, searchText);
 
   // ---- API ACTIONS ----
+  const getAuthHeaders = (extra = {}) => {
+    const token = localStorage.getItem('hkpt_token');
+    return { ...(token ? { 'Authorization': `Bearer ${token}` } : {}), ...extra };
+  };
+
   const handleCreateFolder = async () => {
     if(!folderName) return;
     const body = { folderPath: targetFolder ? `${targetFolder}/${folderName}` : folderName };
-    await fetch('/api/docs/create-folder', { method: 'POST', body: JSON.stringify(body) });
+    await fetch('/api/docs/create-folder', { method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     setModalType(null); setFolderName(''); fetchTree();
   };
 
@@ -144,13 +208,13 @@ const HuyenKhongCac = ({ currentUser }) => {
     if(!textFileName || !textContent) return;
     const name = textFileName.endsWith('.md') ? textFileName : `${textFileName}.md`;
     const fPath = targetFolder ? `${targetFolder}/${name}` : name;
-    await fetch('/api/docs/save-text', { method: 'POST', body: JSON.stringify({ filePath: fPath, content: textContent }) });
+    await fetch('/api/docs/save-text', { method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ filePath: fPath, content: textContent }) });
     setModalType(null); setTextFileName(''); setTextContent(''); fetchTree();
   };
 
   const handleUpdateText = async () => {
     if(!textContent || !selectedFile) return;
-    await fetch('/api/docs/save-text', { method: 'POST', body: JSON.stringify({ filePath: selectedFile.path, content: textContent }) });
+    await fetch('/api/docs/save-text', { method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ filePath: selectedFile.path, content: textContent }) });
     setModalType(null); 
     setFileContent(textContent);
     fetchTree();
@@ -160,7 +224,7 @@ const HuyenKhongCac = ({ currentUser }) => {
     if (e) e.stopPropagation();
     if (!window.confirm(`Bạn có chắc muốn xóa ${isFolder ? 'thư mục' : 'file'}:\n${itemPath}?`)) return;
     
-    await fetch('/api/docs/delete', { method: 'POST', body: JSON.stringify({ itemPath }) });
+    await fetch('/api/docs/delete', { method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ itemPath }) });
     
     if (!isFolder && selectedFile?.path === itemPath) {
        setSelectedFile(null);
@@ -177,8 +241,13 @@ const HuyenKhongCac = ({ currentUser }) => {
     for (let i=0; i<uploadFiles.length; i++) { formData.append('files', uploadFiles[i]); }
     
     try {
-      await fetch('/api/docs/upload', { method: 'POST', body: formData });
-      setModalType(null); setUploadFiles(null); fetchTree();
+      const res = await fetch('/api/docs/upload', { method: 'POST', headers: getAuthHeaders(), body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Upload thất bại' }));
+        alert('Upload lỗi: ' + (err.error || res.statusText));
+      } else {
+        setModalType(null); setUploadFiles(null); fetchTree();
+      }
     } catch (e) { alert('Upload lỗi: ' + e.message); }
     setUploading(false);
   };
@@ -228,11 +297,35 @@ const HuyenKhongCac = ({ currentUser }) => {
           <>
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <div>
-                 <h2 className="text-xl font-black text-slate-800">{selectedFile.name.replace('.md','')}</h2>
-                 <span className="text-xs font-mono text-slate-400 bg-slate-200/50 px-2 py-0.5 rounded-md mt-1 inline-block">{selectedFile.path}</span>
+                 <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                   <FileIcon node={selectedFile} size={20} />
+                   {getDisplayName(selectedFile)}
+                 </h2>
+                 <div className="flex items-center gap-3 mt-1">
+                   <span className="text-xs font-mono text-slate-400 bg-slate-200/50 px-2 py-0.5 rounded-md inline-block">{selectedFile.path}</span>
+                   {selectedFile.size && <span className="text-xs text-slate-400">{formatFileSize(selectedFile.size)}</span>}
+                   {getFileType(selectedFile) === 'image' && <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md font-bold">Hình ảnh</span>}
+                   {getFileType(selectedFile) === 'pdf'   && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-md font-bold">PDF</span>}
+                   {getFileType(selectedFile) === 'markdown' && <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md font-bold">Markdown</span>}
+                 </div>
               </div>
-              <div className="flex gap-2">
-                 {currentUser && (
+              <div className="flex gap-2 items-center">
+                 {/* Zoom controls for images */}
+                 {getFileType(selectedFile) === 'image' && (
+                   <>
+                     <button onClick={() => setImgZoom(z => Math.max(0.25, z - 0.25))} className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition" title="Thu nhỏ"><ZoomOut size={16}/></button>
+                     <span className="text-xs font-bold text-slate-500 w-12 text-center">{Math.round(imgZoom*100)}%</span>
+                     <button onClick={() => setImgZoom(z => Math.min(4, z + 0.25))} className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition" title="Phóng to"><ZoomIn size={16}/></button>
+                   </>
+                 )}
+                 {/* Download binary files */}
+                 {(getFileType(selectedFile) === 'image' || getFileType(selectedFile) === 'pdf') && binaryDataUrl && (
+                   <a href={binaryDataUrl} download={selectedFile.name}
+                      className="px-3 py-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-sm font-bold transition flex items-center gap-1">
+                     <Download size={14}/> Tải
+                   </a>
+                 )}
+                 {currentUser && getFileType(selectedFile) === 'markdown' && (
                    <button onClick={() => { setTextContent(fileContent); setModalType('edit'); }} className="px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg text-sm font-bold transition flex items-center gap-1"><FileText size={14}/> Sửa</button>
                  )}
                  {isAdmin && (
@@ -240,11 +333,34 @@ const HuyenKhongCac = ({ currentUser }) => {
                  )}
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 md:p-10 prose prose-slate max-w-none
-              prose-headings:font-black prose-headings:text-slate-800 prose-h1:text-3xl prose-h2:text-xl prose-h2:border-b prose-h2:border-slate-200 prose-h2:pb-2
-              prose-code:bg-slate-100 prose-code:text-indigo-700 prose-code:px-1 prose-code:rounded
-              prose-pre:bg-slate-900 prose-pre:text-slate-100 prose-blockquote:border-indigo-400 prose-blockquote:bg-indigo-50/40">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{fileContent}</ReactMarkdown>
+
+            {/* CONTENT VIEWER */}
+            <div className="flex-1 overflow-auto">
+              {getFileType(selectedFile) === 'image' && binaryDataUrl && (
+                <div className="w-full h-full flex items-center justify-center bg-slate-50 p-4">
+                  <img
+                    src={binaryDataUrl}
+                    alt={selectedFile.name}
+                    style={{ transform: `scale(${imgZoom})`, transformOrigin: 'center center', transition: 'transform 0.2s', maxWidth: '100%' }}
+                    className="rounded-xl shadow-lg"
+                  />
+                </div>
+              )}
+              {getFileType(selectedFile) === 'pdf' && binaryDataUrl && (
+                <iframe
+                  src={binaryDataUrl}
+                  className="w-full h-full border-0"
+                  title={selectedFile.name}
+                />
+              )}
+              {getFileType(selectedFile) === 'markdown' && (
+                <div className="p-6 md:p-10 prose prose-slate max-w-none
+                  prose-headings:font-black prose-headings:text-slate-800 prose-h1:text-3xl prose-h2:text-xl prose-h2:border-b prose-h2:border-slate-200 prose-h2:pb-2
+                  prose-code:bg-slate-100 prose-code:text-indigo-700 prose-code:px-1 prose-code:rounded
+                  prose-pre:bg-slate-900 prose-pre:text-slate-100 prose-blockquote:border-indigo-400 prose-blockquote:bg-indigo-50/40">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{fileContent}</ReactMarkdown>
+                </div>
+              )}
             </div>
           </>
         ) : (
@@ -263,7 +379,7 @@ const HuyenKhongCac = ({ currentUser }) => {
             <button onClick={() => setModalType(null)} className="absolute top-4 right-4 text-slate-400 hover:text-red-500 rounded-full p-2 hover:bg-slate-100 transition"><X size={20}/></button>
             <h3 className="text-xl font-black text-slate-800 mb-4 border-b pb-3 flex items-center gap-2">
               {modalType === 'folder' && <><Folder className="text-amber-500"/> Tạo Thư Mục Mới</>}
-              {modalType === 'upload' && <><Upload className="text-blue-500"/> Tải Lên Tài Liệu (.md, .docx)</>}
+              {modalType === 'upload' && <><Upload className="text-blue-500"/> Tải Lên Tài Liệu</>}
               {modalType === 'write'  && <><FileText className="text-emerald-500"/> Soạn Bài Viết Mới</>}
               {modalType === 'edit'  && <><FileText className="text-indigo-500"/> Chỉnh Sửa Bài Viết</>}
             </h3>
@@ -291,15 +407,22 @@ const HuyenKhongCac = ({ currentUser }) => {
               {modalType === 'upload' && (
                 <div>
                   <div className="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center bg-slate-50 relative hover:border-blue-400 transition">
-                    <input type="file" multiple accept=".md,.doc,.docx,.txt" onChange={e => setUploadFiles(e.target.files)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                    <input type="file" multiple
+                      accept=".md,.doc,.docx,.txt,.pdf,.jpg,.jpeg,.png,.gif,.webp,.svg"
+                      onChange={e => setUploadFiles(e.target.files)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                     <Upload size={32} className="mx-auto text-blue-400 mb-2"/>
                     <p className="font-bold text-slate-700 line-clamp-2">
                        {uploadFiles && uploadFiles.length > 0 ? Array.from(uploadFiles).map(f=>f.name).join(', ') : 'Kéo thả hoặc nhấp để chọn file'}
                     </p>
-                    <p className="text-xs text-slate-400 mt-1">Hỗ trợ: Markdown (.md), Word (.docx)</p>
+                    <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+                      {[{label:'Markdown', color:'indigo'},{label:'Word', color:'blue'},{label:'PDF', color:'red'},{label:'JPG/PNG', color:'emerald'},{label:'WebP/GIF', color:'amber'}].map(t => (
+                        <span key={t.label} className={`text-xs bg-${t.color}-50 text-${t.color}-600 border border-${t.color}-200 px-2 py-0.5 rounded-full font-bold`}>{t.label}</span>
+                      ))}
+                    </div>
                   </div>
                   <button onClick={handleUpload} disabled={uploading} className="w-full mt-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-black py-3 rounded-xl transition shadow-md">
-                    {uploading ? 'Đang tải lên và phân tích...' : 'Bắt Đầu Tải Lên'}
+                    {uploading ? 'Đang tải lên...' : 'Bắt Đầu Tải Lên'}
                   </button>
                 </div>
               )}
