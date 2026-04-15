@@ -134,8 +134,8 @@ export default function App() {
             <div className="flex items-center gap-2 text-indigo-900 cursor-pointer" onClick={() => setCurrentView('TRACKER')}>
                <Compass className="text-red-600" size={32} />
                <div>
-                  <h1 className="text-xl font-black tracking-tight leading-none bg-gradient-to-r from-red-600 to-indigo-600 bg-clip-text text-transparent">HKPT PRO</h1>
-                  <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mt-1">Xuan Kong App</p>
+                  <h1 className="font-display text-xl font-bold tracking-tight leading-none bg-gradient-to-r from-red-600 to-indigo-600 bg-clip-text text-transparent">HKPT PRO</h1>
+                  <p className="text-[10px] font-semibold tracking-[0.2em] text-slate-400 uppercase mt-1">Huyền Không Phi Tinh</p>
                </div>
             </div>
 
