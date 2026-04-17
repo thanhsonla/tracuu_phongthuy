@@ -204,9 +204,6 @@ export default function App() {
                     <UserIcon size={16} /> Đăng Nhập
                  </button>
                )}
-
-               )}
-
             </div>
             ) : (
                <div className="flex bg-indigo-50 border border-indigo-200 text-indigo-800 px-4 py-2 rounded-xl font-bold gap-2 text-sm">
