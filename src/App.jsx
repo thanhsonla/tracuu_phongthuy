@@ -9,6 +9,7 @@ import AuthScreen from './components/AuthScreen';
 import AccountScreen from './components/AccountScreen';
 import ProjectMapView from './components/ProjectMapView';
 import GuestWizard from './components/GuestWizard';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('TRACKER');
@@ -249,13 +250,15 @@ export default function App() {
            )}
 
            {currentView === 'GUEST_WIZARD' && (
-              <GuestWizard 
-                 onGoToLogin={(guestProject) => {
-                     sessionStorage.setItem('hkpt_guest_project', JSON.stringify(guestProject));
-                     setCurrentView('LOGIN');
-                 }}
-                 onCancel={() => setCurrentView('TRACKER')}
-              />
+              <ErrorBoundary>
+                 <GuestWizard 
+                    onGoToLogin={(guestProject) => {
+                        sessionStorage.setItem('hkpt_guest_project', JSON.stringify(guestProject));
+                        setCurrentView('LOGIN');
+                    }}
+                    onCancel={() => setCurrentView('TRACKER')}
+                 />
+              </ErrorBoundary>
            )}
            
            {currentView === 'CREATE' && (
