@@ -76,7 +76,7 @@ const GUA_8 = [
   { name: 'Đoài', ang: 270 }, { name: 'Càn', ang: 315 }
 ];
 
-const BatTrachCompass = ({ degree = 0, menhQuai = '' }) => {
+const BatTrachCompass = ({ degree = 0, menhQuai = '', bgOpacity = 1 }) => {
   const facingRot = degree;
   const tsPhases = getTruongSinhPhases(menhQuai);
   
@@ -147,7 +147,7 @@ const BatTrachCompass = ({ degree = 0, menhQuai = '' }) => {
 
             {/* ====== 0. VÒNG TỌA ĐỘ NGOÀI CÙNG ====== */}
             <g>
-              <circle cx={cx} cy={cy} r={R_COORD} fill="rgba(255,255,255,0.92)" stroke="#111" strokeWidth="2" />
+              <circle cx={cx} cy={cy} r={R_COORD} fill={`rgba(255,255,255,${0.92 * bgOpacity})`} stroke="#111" strokeWidth="2" />
               <circle cx={cx} cy={cy} r={R_BT} fill="none" stroke="#666" strokeWidth="1" />
               {Array.from({length: 72}).map((_, i) => {
                 const ang = i * 5;
@@ -175,8 +175,8 @@ const BatTrachCompass = ({ degree = 0, menhQuai = '' }) => {
               let fillBg = `rgba(255,255,255,0)`;
               let fillText = '#333';
               if (bt) {
-                 // Opacity 0.8 để tỏa màu ánh lên các vòng trong
-                 fillBg = bt.info.type === 'Cát' ? `rgba(254,240,138,0.8)` : `rgba(167,243,208,0.8)`;
+                 // bgOpacity chỉ ảnh hưởng nền, chữ/lưới giữ nguyên độ nét
+                 fillBg = bt.info.type === 'Cát' ? `rgba(254,240,138,${0.8 * bgOpacity})` : `rgba(167,243,208,${0.8 * bgOpacity})`;
                  fillText = bt.info.type === 'Cát' ? '#b91c1c' : '#1e40af';
               }
               const ptBT = polarToCartesian(cx, cy, (R_24M + R_BT)/2, gua.ang);
@@ -210,7 +210,7 @@ const BatTrachCompass = ({ degree = 0, menhQuai = '' }) => {
               const ptBorderEnd = polarToCartesian(cx, cy, R_TS, startAng);
               
               const isHighlight = phase === 'Trường Sinh' || phase === 'Đế Vượng' || phase === 'Mộ';
-              const fillWedge = isHighlight ? 'rgba(239,68,68,0.7)' : 'transparent'; // Red-500 semi-transparent
+              const fillWedge = isHighlight ? `rgba(239,68,68,${0.7 * bgOpacity})` : 'transparent';
               const textColor = isHighlight ? '#ffffff' : '#92400E';
               const textWeight = isHighlight ? '900' : '800';
 
@@ -257,7 +257,7 @@ const BatTrachCompass = ({ degree = 0, menhQuai = '' }) => {
           
           {/* ====== 5. TRUNG CUNG (CỐ ĐỊNH, KHÔNG XOAY, HIỂN THỊ MỆNH QUÁI) ====== */}
           <g>
-            <circle cx={cx} cy={cy} r={R_CENTER} fill="#fff" stroke="#94a3b8" strokeWidth="3" />
+            <circle cx={cx} cy={cy} r={R_CENTER} fill={`rgba(255,255,255,${bgOpacity})`} stroke="#94a3b8" strokeWidth="3" />
             
             {/* Hiển thị Ký hiệu Bát Quái và Tên */}
             <text x={cx} y={cy - 10} fontSize="52" fontWeight="900" fill="#1e293b" textAnchor="middle" dominantBaseline="central">

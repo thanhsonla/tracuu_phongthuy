@@ -248,18 +248,6 @@ export default function App() {
                <TimeStarTracker />
              </>
            )}
-
-           {currentView === 'GUEST_WIZARD' && (
-              <ErrorBoundary>
-                 <GuestWizard 
-                    onGoToLogin={(guestProject) => {
-                        sessionStorage.setItem('hkpt_guest_project', JSON.stringify(guestProject));
-                        setCurrentView('LOGIN');
-                    }}
-                    onCancel={() => setCurrentView('TRACKER')}
-                 />
-              </ErrorBoundary>
-           )}
            
            {currentView === 'CREATE' && (
              <CreateProject 
@@ -323,6 +311,20 @@ export default function App() {
         <p className="text-slate-500 font-bold tracking-wide">Tạo bởi Nguyễn Trung Thành</p>
         <p className="text-slate-500 font-medium text-sm mt-1">Nhu cầu tư vấn phong thủy tại <a href="https://phongthuyhongphuc.com/" target="_blank" rel="noreferrer" className="text-indigo-600 hover:text-indigo-800 font-bold">https://phongthuyhongphuc.com/</a></p>
       </footer>
+
+      {/* GUEST WIZARD - Rendered OUTSIDE main to avoid transform containing block issue */}
+      {/* CSS transform on ancestor (animate-slide-up) breaks position:fixed in children */}
+      {currentView === 'GUEST_WIZARD' && (
+        <ErrorBoundary>
+          <GuestWizard 
+            onGoToLogin={(guestProject) => {
+                sessionStorage.setItem('hkpt_guest_project', JSON.stringify(guestProject));
+                setCurrentView('LOGIN');
+            }}
+            onCancel={() => setCurrentView('TRACKER')}
+          />
+        </ErrorBoundary>
+      )}
     </div>
   );
 }
