@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { ArrowRight, MapPin, Compass, User, Map, AlertCircle, X, Download } from 'lucide-react';
+import { ArrowRight, MapPin, Compass, User, Map as MapIcon, AlertCircle, X, Download } from 'lucide-react';
 import MobileSensorCompass from './MobileSensorCompass';
 import BatTrachCompass from './BatTrachCompass';
 
@@ -20,7 +20,7 @@ const SmartMiniFloorPlan = ({ degree, menhQuai, onComplete }) => {
   return (
     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
       <h3 className="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">
-        <Map className="text-emerald-600" /> Sơ Đồ Không Gian Xung Quanh
+        <MapIcon className="text-emerald-600" /> Sơ Đồ Không Gian Xung Quanh
       </h3>
       
       <div className="flex bg-slate-100 rounded-xl p-1 mb-6">
@@ -144,7 +144,7 @@ const GuestWizard = ({ onGoToLogin, onCancel }) => {
                 {mapStep(1, 'Định vị', <MapPin size={14}/>)}
                 {mapStep(2, 'La Bàn', <Compass size={14}/>)}
                 {mapStep(3, 'Cung Phi', <User size={14}/>)}
-                {mapStep(4, 'Sơ Đồ', <Map size={14}/>)}
+                {mapStep(4, 'Sơ Đồ', <MapIcon size={14}/>)}
              </div>
           </div>
 
