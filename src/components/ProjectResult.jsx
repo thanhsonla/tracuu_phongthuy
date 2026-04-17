@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { ArrowLeft, User, MapPin, FileText, Mountain, Compass, Navigation, Map, AlertTriangle, Info, CheckCircle, Star, Sparkles, X, Clock, Calendar, Plus, Activity, Save, Edit, Download, Loader, TrendingUp } from 'lucide-react';
+import { ArrowLeft, User, MapPin, FileText, Mountain, Compass, Navigation, Map, AlertTriangle, Info, CheckCircle, Star, Sparkles, X, Clock, Calendar, Plus, Activity, Save, Edit, Download, Loader, TrendingUp, Share2 } from 'lucide-react';
 import { analyzeLine, findMountainForStar, flyStar } from '../services/GridGeneratorService';
 import { analyzeFormations, generateRemedies } from '../services/StarAnalysisService';
 import { MOUNTAINS, REPLACEMENT_STARS, VIEW_PERMUTATIONS, LABELS, trigramToGridIndex, getCombinationDesc, getLocalYMD } from '../data/constants';
@@ -64,8 +64,17 @@ const getStarTheme = (star, level) => {
     return colors[star]?.[level] || colors[1].info;
 }
 
-const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProject }) => {
+const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProject, isSharedMode }) => {
   const [viewMode, setViewMode] = useState('FACING_UP');
+  
+  const handleShareLink = useCallback(() => {
+    const url = window.location.origin + window.location.pathname + '?share=' + project.id;
+    navigator.clipboard.writeText(url).then(() => {
+      alert('Đã chép link chia sẻ dự án vào bộ nhớ đệm (Clipboard)! Bạn có thể gửi link này cho khách hàng.');
+    }).catch(err => {
+      alert('Không thể chép link, vui lòng copy thủ công: ' + url);
+    });
+  }, [project.id]);
   const [activeTab, setActiveTab] = useState('TINH_BAN');
   const [remedyTab, setRemedyTab] = useState('SITTING');
   const [enableQueThe, setEnableQueThe] = useState(true);
@@ -293,12 +302,21 @@ const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProj
            <div className="flex justify-between items-start mb-6">
               <div>
                  <div className="flex gap-3 mb-4 flex-wrap">
+                     {!isSharedMode && (
                      <button onClick={() => setView('LIBRARY')} className="flex items-center gap-1.5 text-slate-500 hover:text-emerald-600 font-bold transition-colors cursor-pointer">
                         <ArrowLeft size={18} /> Thư Viện
                      </button>
+                     )}
+                     {!isSharedMode && (
                      <button onClick={() => setView('CREATE')} className="flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 font-bold transition-colors cursor-pointer border-l-2 border-slate-200 pl-3">
                         <Edit size={16} /> Sửa Thông Tin
                      </button>
+                     )}
+                     {!isSharedMode && (
+                     <button onClick={handleShareLink} className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 font-bold transition-all cursor-pointer px-4 py-2 rounded-xl border border-indigo-200 bg-indigo-50 shadow-sm text-sm">
+                        <Share2 size={16} /> Chia Sẻ
+                     </button>
+                     )}
                      <button onClick={handleExportPdf} disabled={isExporting} className="flex items-center gap-1.5 text-white bg-gradient-to-r from-red-600 to-indigo-600 hover:from-red-700 hover:to-indigo-700 font-bold transition-all cursor-pointer px-4 py-2 rounded-xl shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-wait text-sm">
                         {isExporting ? <><Loader size={16} className="animate-spin" /> Đang xuất...</> : <><Download size={16} /> Xuất Báo Cáo PDF</>}
                      </button>
@@ -701,9 +719,15 @@ const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProj
                  <h3 className="text-2xl font-black text-slate-800 flex items-center gap-2">
                     <Calendar className="text-amber-500" /> Hồ Sơ Tư Vấn & Nhật Ký
                  </h3>
+                 {handleShareLink && (
+                    <button onClick={handleShareLink} className="flex items-center gap-2 text-indigo-600 font-bold text-sm hover:text-indigo-800">
+                       <Share2 size={18} /> Chia sẻ
+                    </button>
+                 )}
               </div>
 
               {/* Box Thêm Ghi Chú */}
+              {!isSharedMode && (
               <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-200 shadow-inner">
                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-3 gap-2">
                     <label className="text-sm font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
@@ -749,6 +773,7 @@ const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProj
                     {!projects && <span className="text-[10px] text-red-500 ml-2 mt-2">Dự án này không có trong DB.</span>}
                  </div>
               </div>
+              )}
 
               {/* Timeline Ghi chú */}
               <div className="space-y-4">
@@ -791,9 +816,11 @@ const ProjectResult = ({ project, setView, projects, setProjects, setCurrentProj
                  <h3 className="text-xl md:text-2xl font-black text-slate-800 flex items-center gap-2">
                     <Activity className="text-blue-500" /> Phân Tích & Luận Cát Hung 9 Cung
                  </h3>
+                 {!isSharedMode && (
                  <button onClick={handleSaveAnalysis} className="bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 w-full md:w-auto">
                     <Save size={18}/> Lưu Phân Tích
                  </button>
+                 )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">

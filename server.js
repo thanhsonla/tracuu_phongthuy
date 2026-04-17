@@ -629,6 +629,17 @@ app.delete('/api/users/:id', authenticateToken, async (req, res) => {
 // ======================================================================
 // API: HỒ SƠ DỰ ÁN
 // ======================================================================
+app.get('/api/projects/share/:id', async (req, res) => {
+  try {
+    const projects = await DB.getProjects();
+    const project = projects.find(p => p.id === req.params.id);
+    if (!project) return res.status(404).json({ error: 'Không tìm thấy dự án hoặc bản quyền đã bị thu hồi' });
+    res.json(project);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/projects', authenticateToken, async (req, res) => {
   try {
     let projects = await DB.getProjects();

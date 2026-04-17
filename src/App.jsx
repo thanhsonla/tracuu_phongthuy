@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Compass, Clock, PlusCircle, Library as LibraryIcon, Ruler, LogOut, User as UserIcon, MapPin } from 'lucide-react';
+import { Compass, Clock, PlusCircle, Library as LibraryIcon, Ruler, LogOut, User as UserIcon, MapPin, Eye as EyeIcon } from 'lucide-react';
 import TimeStarTracker from './components/TimeStarTracker';
 import CreateProject from './components/CreateProject';
 import ProjectResult from './components/ProjectResult';
@@ -8,6 +8,7 @@ import LuBanRuler from './components/LuBanRuler';
 import AuthScreen from './components/AuthScreen';
 import AccountScreen from './components/AccountScreen';
 import ProjectMapView from './components/ProjectMapView';
+import GuestWizard from './components/GuestWizard';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('TRACKER');
@@ -17,6 +18,7 @@ export default function App() {
   // Auth State
   const [currentUser, setCurrentUser] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isSharedMode, setIsSharedMode] = useState(false);
   
   // Header Clock State
   const [now, setNow] = useState(new Date());
@@ -44,6 +46,30 @@ export default function App() {
     window.addEventListener('auth-expired', handleAuthExpired);
 
     const initAuth = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const shareId = urlParams.get('share');
+      if (shareId) {
+        setIsSharedMode(true);
+        try {
+          const res = await fetch('/api/projects/share/' + shareId);
+          if (res.ok) {
+            const projectData = await res.json();
+            if (projectData.error) {
+               alert(projectData.error);
+            } else {
+               setCurrentProject(projectData);
+               setCurrentView('RESULT');
+            }
+          } else {
+            alert('Lỗi truy xuất dự án chia sẻ');
+          }
+        } catch(e) {
+          console.error(e);
+        }
+        setIsCheckingAuth(false);
+        return;
+      }
+
       const storedToken = localStorage.getItem('hkpt_token');
       if (!storedToken) {
         setIsCheckingAuth(false);
@@ -140,6 +166,7 @@ export default function App() {
             </div>
 
             {/* TOP NAVIGATION TABS */}
+            {!isSharedMode ? (
             <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
                <nav className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-full md:w-auto overflow-x-auto">
                  {navItems.map(nav => {
@@ -178,7 +205,14 @@ export default function App() {
                  </button>
                )}
 
+               )}
+
             </div>
+            ) : (
+               <div className="flex bg-indigo-50 border border-indigo-200 text-indigo-800 px-4 py-2 rounded-xl font-bold gap-2 text-sm">
+                  <EyeIcon className="text-indigo-600" size={18} /> Chế độ xem khách
+               </div>
+            )}
 
           </div>
         </div>
@@ -199,7 +233,33 @@ export default function App() {
               />
            )}
            
-           {(currentView === 'TRACKER' || (!currentUser && !['TRACKER', 'LUBAN', 'LOGIN'].includes(currentView))) && <TimeStarTracker />}
+           {(currentView === 'TRACKER' || (!currentUser && !['TRACKER', 'LUBAN', 'LOGIN', 'GUEST_WIZARD'].includes(currentView)) || (!currentUser && currentView === 'RESULT' && !isSharedMode)) && (
+             <>
+               {!currentUser && !isSharedMode && (
+                  <div className="bg-gradient-to-r from-indigo-900 to-slate-800 rounded-3xl p-6 md:p-10 shadow-lg text-white mb-8 text-center relative overflow-hidden border border-slate-700">
+                     <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                     <div className="relative z-10">
+                        <h2 className="text-2xl md:text-4xl font-black mb-3 text-amber-400 drop-shadow-md">Khảo Sát Hướng Cát Hung Nhà Ở</h2>
+                        <p className="text-slate-300 mb-8 max-w-2xl mx-auto font-medium text-sm md:text-base">Trải nghiệm tính năng lập sơ đồ không gian, đo từ trường bằng La Bàn Vệ Tinh trực tiếp trên điện thoại để nhận diện cơ bản các hướng tốt xấu theo Bát Trạch.</p>
+                        <button onClick={() => setCurrentView('GUEST_WIZARD')} className="bg-gradient-to-r from-rose-500 to-orange-500 text-white font-black px-6 md:px-8 py-3 md:py-4 rounded-xl shadow-xl hover:from-rose-600 hover:to-orange-600 hover:scale-105 transition-all text-base md:text-lg ring-4 ring-rose-500/30">
+                           Bắt Đầu Khảo Sát Nhanh (Miễn Phí)
+                        </button>
+                     </div>
+                  </div>
+               )}
+               <TimeStarTracker />
+             </>
+           )}
+
+           {currentView === 'GUEST_WIZARD' && (
+              <GuestWizard 
+                 onGoToLogin={(guestProject) => {
+                     sessionStorage.setItem('hkpt_guest_project', JSON.stringify(guestProject));
+                     setCurrentView('LOGIN');
+                 }}
+                 onCancel={() => setCurrentView('TRACKER')}
+              />
+           )}
            
            {currentView === 'CREATE' && (
              <CreateProject 
@@ -240,6 +300,7 @@ export default function App() {
                setProjects={setProjects}
                setCurrentProject={setCurrentProject}
                currentUser={currentUser}
+               isSharedMode={isSharedMode}
              />
            )}
            

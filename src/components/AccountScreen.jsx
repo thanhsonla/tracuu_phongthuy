@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Lock, Save, Database, Shield, Check, X, ShieldAlert, FileText, Settings, Compass, Ruler, Library, PlusCircle, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Save, Database, Shield, Check, X, ShieldAlert, FileText, Settings, Compass, Ruler, Library, PlusCircle, Eye, EyeOff, MapPin } from 'lucide-react';
 
 export default function AccountScreen({ currentUser, projects, onOpenProject }) {
   const isAdmin = currentUser?.role === 'ADMIN';
@@ -7,6 +7,7 @@ export default function AccountScreen({ currentUser, projects, onOpenProject }) 
 
   const tabs = [
     { id: 'info', label: 'Thông Tin Cá Nhân', icon: User },
+    ...(isAdmin ? [{ id: 'map', label: 'Cấu Hình Bản Đồ', icon: MapPin }] : []),
     ...(isAdmin ? [{ id: 'rbac', label: 'Quản Lý Phân Quyền', icon: Shield }] : [])
   ];
 
@@ -40,6 +41,7 @@ export default function AccountScreen({ currentUser, projects, onOpenProject }) 
       </div>
 
       {activeTab === 'info' && <PersonalInfo currentUser={currentUser} projects={projects} onOpenProject={onOpenProject} />}
+      {activeTab === 'map' && isAdmin && <MapSettingsManager />}
       {activeTab === 'rbac' && isAdmin && <RBACManager currentUser={currentUser} />}
 
     </div>
@@ -381,4 +383,61 @@ function RBACManager({ currentUser }) {
 
     </div>
   )
+}
+
+// ==========================================
+// CẤU HÌNH BẢN ĐỒ (ADMIN/VIP ONLY)
+// ==========================================
+function MapSettingsManager() {
+  const [apiKey, setApiKey] = React.useState(() => localStorage.getItem('hkpt_google_maps_key') || '');
+  const [useGoogleMap, setUseGoogleMap] = React.useState(() => localStorage.getItem('hkpt_use_google_map') === 'true');
+
+  const handleSave = () => {
+    localStorage.setItem('hkpt_google_maps_key', apiKey);
+    localStorage.setItem('hkpt_use_google_map', useGoogleMap);
+    alert('Đã lưu cấu hình bản đồ thành công vào thiết bị!');
+  };
+
+  return (
+    <div className="border border-slate-200 bg-white rounded-3xl p-6 shadow-sm max-w-3xl">
+       <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+          <div className="bg-emerald-100 text-emerald-600 p-3 rounded-xl">
+             <MapPin size={24} />
+          </div>
+          <div>
+             <h4 className="font-black text-xl text-slate-800">Cấu Hình Dữ Liệu Bản Đồ</h4>
+             <p className="text-sm text-slate-500 font-medium">Thiết lập chuyển đổi giữa OpenStreetMap (Miễn phí) và Google Maps (Chuyên Cấp VIP - Độ chuẩn xác cao hơn).</p>
+          </div>
+       </div>
+       
+       <div className="space-y-6">
+          <div className="flex items-start gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 cursor-pointer hover:border-emerald-300 transition-colors" onClick={() => setUseGoogleMap(!useGoogleMap)}>
+             <input type="checkbox" id="useGoogleMap" checked={useGoogleMap} readOnly className="w-6 h-6 mt-0.5 accent-emerald-600" />
+             <div>
+                <label className="font-black text-slate-700 text-lg cursor-pointer">Sử Dụng Bản Đồ Hệ Sinh Thái Google</label>
+                <p className="text-sm text-slate-500 mt-1 font-medium">Mặc định hệ thống dùng Leaflet/OSM miễn phí. Nâng cấp trải nghiệm đo la bàn và xác định vị trí chi tiết hơn bằng Google Maps. Yêu cầu nhập API Key cá nhân.</p>
+             </div>
+          </div>
+
+          {useGoogleMap && (
+             <div className="animate-slide-up bg-white p-5 rounded-2xl border border-indigo-200 shadow-inner">
+                <label className="text-xs font-black tracking-widest text-indigo-600 uppercase mb-2 flex items-center gap-2"><Lock size={14}/> Khóa API Xác Thực (Google API Key)</label>
+                <input type="text" value={apiKey} onChange={e => setApiKey(e.target.value)}
+                  placeholder="Ví dụ: AIzaSyB2xx..."
+                  className="w-full mt-1 bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 font-medium focus:border-indigo-500 focus:bg-white shadow-sm outline-none" />
+                <p className="text-[11px] font-bold text-slate-400 mt-3 flex items-start gap-1">
+                  <ShieldAlert size={14} className="shrink-0 text-amber-500" /> 
+                  API Key được lưu trữ cục bộ (Local Storage) trên trình duyệt của thiết bị này nhằm đảm bảo tính bảo mật và không gửi lên máy chủ chung.
+                </p>
+             </div>
+          )}
+
+          <div className="pt-4 flex justify-end">
+             <button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 px-8 rounded-xl shadow-md transition-all flex items-center gap-2">
+                <Save size={18} /> Lưu Thiếp Lập Map
+             </button>
+          </div>
+       </div>
+    </div>
+  );
 }
