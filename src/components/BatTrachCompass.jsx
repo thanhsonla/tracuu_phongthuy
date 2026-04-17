@@ -175,8 +175,8 @@ const BatTrachCompass = ({ degree = 0, menhQuai = '', bgOpacity = 1 }) => {
               let fillBg = `rgba(255,255,255,0)`;
               let fillText = '#333';
               if (bt) {
-                 // bgOpacity chỉ ảnh hưởng nền, chữ/lưới giữ nguyên độ nét
-                 fillBg = bt.info.type === 'Cát' ? `rgba(254,240,138,${0.8 * bgOpacity})` : `rgba(167,243,208,${0.8 * bgOpacity})`;
+                 // bgOpacity chỉ ảnh hưởng nền vòng Trường Sinh (theo yêu cầu mới, bỏ nền vòng Bát trạch)
+                 fillBg = 'transparent';
                  fillText = bt.info.type === 'Cát' ? '#b91c1c' : '#1e40af';
               }
               const ptBT = polarToCartesian(cx, cy, (R_24M + R_BT)/2, gua.ang);
@@ -187,7 +187,7 @@ const BatTrachCompass = ({ degree = 0, menhQuai = '', bgOpacity = 1 }) => {
                   
                   {/* Đường phân giới bát quái (Kéo dài từ R_CENTER ra R_BT) */}
                   <line x1={polarToCartesian(cx, cy, R_CENTER, startAng).x} y1={polarToCartesian(cx, cy, R_CENTER, startAng).y} 
-                        x2={polarToCartesian(cx, cy, R_BT, startAng).x} y2={polarToCartesian(cx, cy, R_BT, startAng).y} stroke="#888" strokeWidth="1" />
+                        x2={polarToCartesian(cx, cy, R_BT, startAng).x} y2={polarToCartesian(cx, cy, R_BT, startAng).y} stroke="#1e293b" strokeWidth="3" />
                   
                   {bt && (
                     <text x={ptBT.x} y={ptBT.y} fontSize="14" fontWeight="900" fill={fillText}
@@ -201,57 +201,7 @@ const BatTrachCompass = ({ degree = 0, menhQuai = '', bgOpacity = 1 }) => {
               );
             })}
 
-            {/* ====== 2. VÒNG 12 TRƯỜNG SINH (NằM LỚP 2 TỪ TRONG RA, DƯỚI Lớp 24 Sơn) ====== */}
-            {tsPhases && tsPhases.map((phase, i) => {
-              const startAng = -22.5 + i*30;
-              const endAng = 7.5 + i*30;
-              const midAng = -7.5 + i*30;
-              const ptBorderBase = polarToCartesian(cx, cy, R_GUA_HAOS, startAng);
-              const ptBorderEnd = polarToCartesian(cx, cy, R_TS, startAng);
-              
-              const isHighlight = phase === 'Trường Sinh' || phase === 'Đế Vượng' || phase === 'Mộ';
-              const fillWedge = isHighlight ? `rgba(239,68,68,${0.7 * bgOpacity})` : 'transparent';
-              const textColor = isHighlight ? '#ffffff' : '#92400E';
-              const textWeight = isHighlight ? '900' : '800';
-
-              return (
-                <g key={`ts-${i}`}>
-                   {/* Trong suốt hoặc Nền Đỏ Nổi nếu là cung Đặc biệt */}
-                  <path d={describeArc(cx, cy, R_GUA_HAOS, R_TS, startAng, endAng)} fill={fillWedge} stroke="#ccc" strokeWidth="0.5"/>
-                  <line x1={ptBorderBase.x} y1={ptBorderBase.y} x2={ptBorderEnd.x} y2={ptBorderEnd.y} stroke="#aaa" strokeWidth="0.8" />
-                  {drawRadialText(phase, midAng, (R_GUA_HAOS + R_TS)/2, "12", textColor, textWeight)}
-                </g>
-              );
-            })}
-
-            {/* ====== 3. VÒNG 24 SƠN (NẰM LỚP 3, TRÊN 12 Trường Sinh) ====== */}
-            {MTN_24.map((m, i) => {
-              const startAng = m.ang - 7.5;
-              const endAng = m.ang + 7.5;
-              const ptStart = polarToCartesian(cx, cy, R_TS, startAng);
-              const ptEnd = polarToCartesian(cx, cy, R_24M, startAng);
-              return (
-                <g key={`mtn-${i}`}>
-                   {/* Rỗng (transparent) để ánh lớp nền Bát Trạch bên dưới */}
-                  <path d={describeArc(cx, cy, R_TS, R_24M, startAng, endAng)} fill={`transparent`} stroke="#ccc" strokeWidth="0.5" />
-                  <line x1={ptStart.x} y1={ptStart.y} x2={ptEnd.x} y2={ptEnd.y} stroke="#999" strokeWidth="0.8" strokeDasharray="3 2" />
-                  {drawRadialText(m.name, m.ang, (R_TS + R_24M)/2, "14", "#1e293b", "900")}
-                </g>
-              );
-            })}
-
-            {/* ====== 4. VÒNG HÀO QUÁI TIÊN THIÊN ====== */}
-            {GUA_8.map((gua, i) => {
-              const startAng = gua.ang - 22.5;
-              const endAng = gua.ang + 22.5;
-              return (
-                 <g key={`hao-${i}`}>
-                   {/* Rỗng (transparent) */}
-                   <path d={describeArc(cx, cy, R_CENTER, R_GUA_HAOS, startAng, endAng)} fill={`transparent`} stroke="#cbd5e1" strokeWidth="0.8" />
-                   {drawTrigram(gua.name, gua.ang)}
-                 </g>
-              );
-            })}
+            {/* Các vòng khác đã được gỡ bỏ theo yêu cầu: 12 Trường Sinh, 24 Sơn, Hào Quái */}
 
           </g>
           
