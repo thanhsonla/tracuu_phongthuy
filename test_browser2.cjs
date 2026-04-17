@@ -7,7 +7,7 @@ const puppeteer = require('puppeteer');
   page.on('console', msg => console.log('LOG:', msg.text()));
   page.on('pageerror', err => console.log('PAGE ERROR:', err.toString()));
   
-  await page.goto('http://localhost:4173');
+  await page.goto('http://localhost:4178');
   
   await page.waitForSelector('button', { timeout: 10000 });
   const btns = await page.$$('button');
@@ -28,7 +28,11 @@ const puppeteer = require('puppeteer');
   await new Promise(r => setTimeout(r, 2000));
   
   const content = await page.content();
-  console.log("Root element content length:", (await page.$eval('#root', el => el.innerHTML)).length);
+  const html = await page.$eval('#root', el => el.innerHTML);
+  console.log("Root element content length:", html.length);
+  
+  await page.screenshot({ path: 'guest_wizard_screenshot.png' });
+  console.log("Screenshot saved to guest_wizard_screenshot.png");
   
   await browser.close();
 })();

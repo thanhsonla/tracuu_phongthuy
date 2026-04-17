@@ -126,8 +126,8 @@ const GuestWizard = ({ onGoToLogin, onCancel }) => {
   );
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-50 overflow-y-auto w-full h-full flex justify-center">
-       <div className="w-full max-w-5xl bg-white min-h-screen relative shadow-2xl md:border-x md:border-slate-200 flex flex-col">
+    <div className="fixed top-0 left-0 right-0 bottom-0 z-[9999] bg-slate-50 overflow-y-auto w-full h-full block">
+       <div className="w-full max-w-5xl mx-auto bg-white min-h-[100vh] relative shadow-2xl md:border-x md:border-slate-200 flex flex-col pb-20">
           <button onClick={onCancel} className="fixed top-4 right-4 md:absolute md:top-4 md:right-4 p-2 bg-white/80 backdrop-blur-md rounded-full text-slate-500 hover:text-red-500 hover:bg-red-50 transition z-50 shadow-md border border-slate-200"><X size={20}/></button>
 
           {/* WIZARD HEADER */}
