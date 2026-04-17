@@ -52,7 +52,7 @@ const SmartMiniFloorPlan = ({ degree, menhQuai, onComplete }) => {
       )}
 
       {/* OVERLAY AREA */}
-      <div className="relative bg-slate-100 rounded-2xl w-full h-[400px] md:h-[500px] border border-slate-200 overflow-hidden flex items-center justify-center">
+      <div className="relative bg-slate-100 rounded-2xl w-full h-[55vh] min-h-[400px] border border-slate-200 overflow-hidden flex items-center justify-center">
          {/* Background Structure */}
          {tab === 'SHAPE' && (
             <div 
@@ -126,9 +126,9 @@ const GuestWizard = ({ onGoToLogin, onCancel }) => {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-       <div className="bg-slate-50 w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden relative my-auto">
-          <button onClick={onCancel} className="absolute top-4 right-4 p-2 bg-white rounded-full text-slate-500 hover:text-red-500 hover:bg-red-50 transition z-50 shadow-sm border border-slate-200"><X size={20}/></button>
+    <div className="fixed inset-0 z-50 bg-slate-50 overflow-y-auto w-full h-full flex justify-center">
+       <div className="w-full max-w-5xl bg-white min-h-screen relative shadow-2xl md:border-x md:border-slate-200 flex flex-col">
+          <button onClick={onCancel} className="fixed top-4 right-4 md:absolute md:top-4 md:right-4 p-2 bg-white/80 backdrop-blur-md rounded-full text-slate-500 hover:text-red-500 hover:bg-red-50 transition z-50 shadow-md border border-slate-200"><X size={20}/></button>
 
           {/* WIZARD HEADER */}
           <div className="bg-white border-b border-slate-200 p-6 pt-10 px-8 text-center relative overflow-hidden">
@@ -149,7 +149,7 @@ const GuestWizard = ({ onGoToLogin, onCancel }) => {
           </div>
 
           {/* WIZARD CONTENT */}
-          <div className="p-6 md:p-8 bg-slate-50/50">
+          <div className="p-4 md:p-8 bg-slate-50/50 flex-1 flex flex-col">
              
              {step === 1 && (
                <div className="space-y-6 animate-slide-up text-center">
