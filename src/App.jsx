@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Compass, Clock, PlusCircle, Library as LibraryIcon, Ruler, LogOut, User as UserIcon, MapPin, Eye as EyeIcon } from 'lucide-react';
+import { Compass, Clock, PlusCircle, Library as LibraryIcon, Ruler, LogOut, User as UserIcon, MapPin, Eye as EyeIcon, Sun, Moon } from 'lucide-react';
 import TimeStarTracker from './components/TimeStarTracker';
 import CreateProject from './components/CreateProject';
 import ProjectResult from './components/ProjectResult';
@@ -21,6 +21,17 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isSharedMode, setIsSharedMode] = useState(false);
+
+  // Dark Mode
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('hkpt_dark_mode') === 'true');
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('hkpt_dark_mode', darkMode);
+  }, [darkMode]);
   
   // Header Clock State
   const [now, setNow] = useState(new Date());
@@ -153,9 +164,21 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-10">
+    <div
+      className="min-h-screen font-sans pb-10 transition-colors duration-300"
+      style={{ background: darkMode ? '#0f0e1a' : '#f8fafc', color: darkMode ? '#e2e8f0' : '#1e293b' }}
+    >
       {/* GLOBAL HEADER */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+      <header
+        className="sticky top-0 z-40"
+        style={{
+          background: darkMode ? 'rgba(15,14,26,0.92)' : 'rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: darkMode ? '1px solid rgba(99,102,241,0.15)' : '1px solid #e2e8f0',
+          boxShadow: darkMode ? '0 4px 20px rgba(0,0,0,0.4)' : '0 1px 8px rgba(0,0,0,0.06)',
+        }}
+      >
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex flex-row justify-between items-center md:flex-row md:justify-between md:items-center py-3 gap-4">
             
@@ -167,18 +190,37 @@ export default function App() {
                </div>
             </div>
 
-            {/* MOBILE ONLY: compact user chip in header */}
+            {/* MOBILE ONLY: compact user chip + dark toggle in header */}
             {!isSharedMode && (
-              <div className="flex md:hidden items-center gap-2">
+              <div className="flex md:hidden items-center gap-1.5">
+                {/* Dark mode toggle - mobile */}
+                <button
+                  id="mobile-darkmode-toggle"
+                  onClick={() => setDarkMode(d => !d)}
+                  className="p-2 rounded-xl transition-all"
+                  style={{
+                    background: darkMode ? 'rgba(99,102,241,0.15)' : 'rgba(100,116,139,0.08)',
+                    color: darkMode ? '#818cf8' : '#64748b',
+                  }}
+                  title={darkMode ? 'Chế độ sáng' : 'Chế độ tối'}
+                >
+                  {darkMode ? <Sun size={17} /> : <Moon size={17} />}
+                </button>
+
                 {currentUser ? (
                   <>
                     <button
                       id="mobile-header-account-btn"
                       onClick={() => setCurrentView('ACCOUNT')}
-                      className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-xl"
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all"
+                      style={{
+                        background: darkMode ? 'rgba(99,102,241,0.15)' : '#eef2ff',
+                        borderColor: darkMode ? 'rgba(99,102,241,0.3)' : '#c7d2fe',
+                        color: darkMode ? '#818cf8' : '#4338ca',
+                      }}
                     >
-                      <UserIcon size={14} className="text-indigo-600" />
-                      <span className="text-xs font-bold text-indigo-700 max-w-[80px] truncate">{currentUser.username}</span>
+                      <UserIcon size={13} />
+                      <span className="max-w-[70px] truncate">{currentUser.username}</span>
                     </button>
                     <button
                       id="mobile-header-logout-btn"
@@ -186,7 +228,7 @@ export default function App() {
                       className="p-2 text-slate-400 hover:text-red-500 transition-colors"
                       title="Đăng xuất"
                     >
-                      <LogOut size={18} />
+                      <LogOut size={16} />
                     </button>
                   </>
                 ) : (
@@ -195,7 +237,7 @@ export default function App() {
                     onClick={() => setCurrentView('LOGIN')}
                     className="flex items-center gap-1.5 bg-slate-900 text-white px-3 py-1.5 rounded-xl text-xs font-bold"
                   >
-                    <UserIcon size={14} /> Đăng Nhập
+                    <UserIcon size={13} /> Đăng Nhập
                   </button>
                 )}
               </div>
@@ -203,8 +245,11 @@ export default function App() {
 
             {/* TOP NAVIGATION TABS */}
             {!isSharedMode ? (
-            <div className="hidden md:flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-               <nav className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-full md:w-auto overflow-x-auto">
+            <div className="hidden md:flex flex-row items-center gap-3 w-full md:w-auto">
+               <nav
+                 className="flex gap-1 p-1 rounded-2xl overflow-x-auto"
+                 style={{ background: darkMode ? 'rgba(30,27,75,0.6)' : '#f1f5f9' }}
+               >
                  {navItems.map(nav => {
                    const Icon = nav.icon;
                    const isActive = currentView === nav.id;
@@ -213,31 +258,62 @@ export default function App() {
                        if (nav.id === 'CREATE') setCurrentProject(null);
                        setCurrentView(nav.id);
                      }}
-                       className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap cursor-pointer
-                         ${isActive ? 'bg-white shadow-md text-slate-800' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}
-                       `}>
-                       <Icon size={18} className={isActive ? nav.color : ''} />
+                       className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap cursor-pointer
+                         ${isActive
+                           ? darkMode ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/40' : 'bg-white shadow-md text-slate-800'
+                           : darkMode ? 'text-slate-400 hover:text-white hover:bg-white/10' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                         }`}>
+                       <Icon size={16} className={isActive ? (darkMode ? 'text-white' : nav.color) : ''} />
                        {nav.label}
                      </button>
                    )
                  })}
                </nav>
 
+               {/* Dark mode toggle - desktop */}
+               <button
+                 id="desktop-darkmode-toggle"
+                 onClick={() => setDarkMode(d => !d)}
+                 className="p-2.5 rounded-xl transition-all border"
+                 style={{
+                   background: darkMode ? 'rgba(99,102,241,0.15)' : '#f8fafc',
+                   borderColor: darkMode ? 'rgba(99,102,241,0.3)' : '#e2e8f0',
+                   color: darkMode ? '#818cf8' : '#64748b',
+                 }}
+                 title={darkMode ? 'Chế độ sáng' : 'Chế độ tối'}
+               >
+                 {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+               </button>
+
                {/* USER INFO & LOGOUT */}
                {currentUser ? (
-                 <div className="flex items-center gap-3 bg-slate-100 rounded-xl px-4 py-2 border border-slate-200 ml-auto md:ml-0">
-                    <div onClick={() => setCurrentView('ACCOUNT')} className="flex flex-col text-right cursor-pointer hover:bg-slate-200 px-2 rounded transition" title="Mở cài đặt tài khoản">
-                      <span className="text-sm font-bold text-slate-800 flex items-center gap-1 justify-end">{currentUser.username} <UserIcon size={14}/></span>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600">{currentUser.role}</span>
+                 <div
+                   className="flex items-center gap-3 rounded-xl px-4 py-2 border ml-auto md:ml-0"
+                   style={{
+                     background: darkMode ? 'rgba(30,27,75,0.5)' : '#f1f5f9',
+                     borderColor: darkMode ? 'rgba(99,102,241,0.2)' : '#e2e8f0',
+                   }}
+                 >
+                    <div onClick={() => setCurrentView('ACCOUNT')} className="flex flex-col text-right cursor-pointer px-2 rounded transition" title="Mở cài đặt tài khoản">
+                      <span
+                        className="text-sm font-bold flex items-center gap-1 justify-end"
+                        style={{ color: darkMode ? '#e2e8f0' : '#1e293b' }}
+                      >
+                        {currentUser.username} <UserIcon size={13}/>
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">{currentUser.role}</span>
                     </div>
-                    <div className="w-px h-6 bg-slate-300 mx-1"></div>
-                    <button onClick={handleLogout} className="text-slate-500 hover:text-red-600 transition-colors" title="Đăng xuất">
-                      <LogOut size={20} />
+                    <div className="w-px h-6 mx-1" style={{ background: darkMode ? 'rgba(255,255,255,0.1)' : '#cbd5e1' }}></div>
+                    <button onClick={handleLogout} className="text-slate-400 hover:text-red-500 transition-colors" title="Đăng xuất">
+                      <LogOut size={18} />
                     </button>
                  </div>
                ) : (
-                 <button onClick={() => setCurrentView('LOGIN')} className="ml-auto md:ml-0 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-md hover:shadow-lg transition">
-                    <UserIcon size={16} /> Đăng Nhập
+                 <button onClick={() => setCurrentView('LOGIN')}
+                   className="ml-auto md:ml-0 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-md hover:shadow-lg transition"
+                   style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)' }}
+                 >
+                    <UserIcon size={15} /> Đăng Nhập
                  </button>
                )}
             </div>
@@ -252,7 +328,7 @@ export default function App() {
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <main className="p-4 md:p-8 pb-24 md:pb-8">
+      <main className="p-4 md:p-8 pb-24 md:pb-8" style={{ minHeight: 'calc(100vh - 64px)' }}>
          <div className="max-w-6xl mx-auto animate-slide-up">
            
            {currentView === 'LOGIN' && !currentUser && (
@@ -342,9 +418,17 @@ export default function App() {
          </div>
       </main>
 
-      <footer className="text-center mt-10 pt-10 pb-6 border-t border-slate-200">
-        <p className="text-slate-500 font-bold tracking-wide">Tạo bởi Nguyễn Trung Thành</p>
-        <p className="text-slate-500 font-medium text-sm mt-1">Nhu cầu tư vấn phong thủy tại <a href="https://phongthuyhongphuc.com/" target="_blank" rel="noreferrer" className="text-indigo-600 hover:text-indigo-800 font-bold">https://phongthuyhongphuc.com/</a></p>
+      <footer
+        className="text-center mt-10 pt-8 pb-6"
+        style={{ borderTop: darkMode ? '1px solid rgba(99,102,241,0.15)' : '1px solid #e2e8f0' }}
+      >
+        <p className="font-bold tracking-wide" style={{ color: darkMode ? '#64748b' : '#94a3b8' }}>Tạo bởi Nguyễn Trung Thành</p>
+        <p className="font-medium text-sm mt-1" style={{ color: darkMode ? '#475569' : '#94a3b8' }}>
+          Nhu cầu tư vấn phong thủy tại{' '}
+          <a href="https://phongthuyhongphuc.com/" target="_blank" rel="noreferrer" className="text-indigo-400 hover:text-indigo-300 font-bold transition-colors">
+            phongthuyhongphuc.com
+          </a>
+        </p>
       </footer>
 
       {/* GUEST WIZARD - Rendered OUTSIDE main to avoid transform containing block issue */}
