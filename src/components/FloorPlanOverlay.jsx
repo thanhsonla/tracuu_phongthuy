@@ -343,19 +343,15 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
             const ptBT = polarToCartesian(cx, cy, (R_TS + R_BT)/2, gua.ang);
             return (
               <g key={`bt-${i}`}>
-                <path d={describeArc(cx, cy, R_TS, R_BT, startAng, endAng)} fill={fillBg} stroke={isSimple ? '#555' : '#666'} strokeWidth={isSimple ? 1.5 : 0.8} />
-                {/* Đường chia 8 cung rõ từ tâm ra ngoài (chỉ chế độ đơn giản) */}
-                {isSimple && (
-                  <line x1={polarToCartesian(cx, cy, R_CENTER, startAng).x} y1={polarToCartesian(cx, cy, R_CENTER, startAng).y} 
-                        x2={polarToCartesian(cx, cy, R_COORD, startAng).x} y2={polarToCartesian(cx, cy, R_COORD, startAng).y} stroke="#333" strokeWidth="2" />
-                )}
-                {!isSimple && (
-                  <line x1={polarToCartesian(cx, cy, R_CENTER, startAng).x} y1={polarToCartesian(cx, cy, R_CENTER, startAng).y} 
-                        x2={polarToCartesian(cx, cy, R_BT, startAng).x} y2={polarToCartesian(cx, cy, R_BT, startAng).y} stroke="#888" strokeWidth="1" />
-                )}
+                <path d={describeArc(cx, cy, R_TS, R_BT, startAng, endAng)} fill={fillBg} stroke={isSimple ? '#333' : '#666'} strokeWidth={isSimple ? 1.5 : 0.8} />
+                
+                {/* ĐƯỜNG CHIA 8 HƯỚNG (NẾT ĐẬM NHẤT) */}
+                <line x1={polarToCartesian(cx, cy, R_CENTER, startAng).x} y1={polarToCartesian(cx, cy, R_CENTER, startAng).y} 
+                      x2={polarToCartesian(cx, cy, isSimple ? R_COORD : R_BT, startAng).x} y2={polarToCartesian(cx, cy, isSimple ? R_COORD : R_BT, startAng).y} 
+                      stroke={isSimple ? "#000" : "#444"} strokeWidth={isSimple ? "3" : "2"} />
                 
                 {bt && (
-                  <text x={ptBT.x} y={ptBT.y} fontSize="13" fontWeight="900" fill={isSimple ? '#1e293b' : fillText}
+                  <text x={ptBT.x} y={ptBT.y} fontSize={isSimple ? "15" : "14"} fontWeight="900" fill={isSimple ? '#000' : fillText}
                         textAnchor="middle" dominantBaseline="central"
                         transform={`rotate(${gua.ang}, ${ptBT.x}, ${ptBT.y})`}>
                     <tspan x={ptBT.x} dy="-8">{bt.name.toUpperCase()}</tspan>
@@ -389,19 +385,26 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
             const endAng = m.ang + 7.5;
             const ptStart = polarToCartesian(cx, cy, R_STAR, startAng);
             // Ở chế độ đơn giản: Đường chia 24 sơn kéo dài ra ngoài vòng Tọa độ
-            const ptEnd24 = isSimple
-              ? polarToCartesian(cx, cy, R_COORD, startAng)
-              : polarToCartesian(cx, cy, R_24M, startAng);
-            const is8Dir = m.ang % 45 === 0;
+            // Chế độ đầy đủ: chỉ kéo ra tới R_24M
+            const ptEnd24 = isSimple ? polarToCartesian(cx, cy, R_COORD, startAng) : polarToCartesian(cx, cy, R_24M, startAng);
+            
+            // Nếu startAng trùng với đường ranh 8 bát quái (startAng - 22.5 == k*45) thì ko cần vẽ vì đã có kẻ đậm bên Bát Quái
+            const is8DirBoundary = Math.abs((startAng - 22.5) % 45) < 0.1 || Math.abs((startAng + 22.5) % 45) < 0.1;
+
             return (
               <g key={`mtn-${i}`}>
                 <path d={describeArc(cx, cy, R_STAR, R_24M, startAng, endAng)} fill={ringFill(0.95)} stroke={ringStroke} strokeWidth={ringStrokeW} />
-                <line x1={ptStart.x} y1={ptStart.y} x2={ptEnd24.x} y2={ptEnd24.y}
-                      stroke={isSimple ? (is8Dir ? '#111' : dividerStroke) : '#999'}
-                      strokeWidth={isSimple ? (is8Dir ? 2.5 : 1.2) : 0.8}
-                      strokeDasharray={isSimple ? '0' : '3 2'} />
-                {drawRadialText(m.name, m.ang, (R_STAR + R_24M)/2, isSimple ? '13' : '12',
-                  isSimple ? '#1e293b' : '#444', '900')}
+                
+                {/* Đường chia 24 hướng (Đậm vừa) */}
+                {!is8DirBoundary && (
+                  <line x1={ptStart.x} y1={ptStart.y} x2={ptEnd24.x} y2={ptEnd24.y}
+                        stroke={isSimple ? "#222" : "#666"}
+                        strokeWidth={isSimple ? "2" : "1.5"}
+                        strokeDasharray={isSimple ? '0' : '4 2'} />
+                )}
+                
+                {drawRadialText(m.name, m.ang, (R_STAR + R_24M)/2, isSimple ? '15' : '13',
+                  isSimple ? '#000' : '#222', '900')}
               </g>
             );
           })}
