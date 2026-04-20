@@ -66,6 +66,9 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
   const [posX, setPosX] = useState(st.posX || 0);
   const [posY, setPosY] = useState(st.posY || 0);
   const [overlayOpacity, setOverlayOpacity] = useState(st.overlayOpacity !== undefined ? st.overlayOpacity : 1);
+  const [viewMode, setViewMode] = useState('full'); // 'full' | 'simple'
+  const [imgContrast, setImgContrast] = useState(1.0); // 1.0 = bình thường, tối đa 2.5
+  const [imgSharpen, setImgSharpen] = useState(0); // 0 = off, mô phỏng sharpen bằng unsharp
   const exportRef = useRef(null);
 
   // === CENTROID POLYGON FEATURE ===
@@ -237,6 +240,14 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
     { name: 'Đoài', ang: 270 }, { name: 'Càn', ang: 315 }
   ];
 
+  // Khi chế độ đơn giản: các vòng nền trong suốt, viền rõ hơn
+  const isSimple = viewMode === 'simple';
+  const ringFill = (alpha = 0.95) => isSimple ? 'rgba(255,255,255,0)' : `rgba(255,255,255,${alpha})`;
+  const ringStroke = isSimple ? '#444' : '#ccc';
+  const ringStrokeW = isSimple ? 1.2 : 0.5;
+  const dividerStroke = isSimple ? '#222' : '#999';
+  const dividerStrokeW = isSimple ? 1.5 : 0.8;
+
   const renderSVG = () => {
     const W = 720, H = 720;
     const cx = W / 2, cy = H / 2;
@@ -298,8 +309,8 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
 
             {/* ====== 0. VÒNG TỌA ĐỘ NGOÀI CÙNG ====== */}
             <g>
-              <circle cx={cx} cy={cy} r={R_COORD} fill="rgba(255,255,255,0.92)" stroke="#111" strokeWidth="2" />
-              <circle cx={cx} cy={cy} r={R_BT} fill="none" stroke="#666" strokeWidth="1" />
+              <circle cx={cx} cy={cy} r={R_COORD} fill={isSimple ? 'rgba(255,255,255,0)' : 'rgba(255,255,255,0.92)'} stroke="#111" strokeWidth={isSimple ? 2.5 : 2} />
+              <circle cx={cx} cy={cy} r={R_BT} fill="none" stroke={ringStroke} strokeWidth={isSimple ? 1.5 : 1} />
             {Array.from({length: 72}).map((_, i) => {
               const ang = i * 5;
               const isMajor = ang % 10 === 0;
@@ -307,12 +318,12 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
               const isSuper = ang % 90 === 0;
               
               const ptInner = polarToCartesian(cx, cy, R_BT, ang);
-              const ptTick = polarToCartesian(cx, cy, R_BT + (isSuper ? 12 : (isMajor ? 8 : 4)), ang);
+              const ptTick = polarToCartesian(cx, cy, R_BT + (isSuper ? 14 : (isMajor ? 9 : 5)), ang);
               
               return (
                 <g key={`coord-${i}`}>
-                   <line x1={ptInner.x} y1={ptInner.y} x2={ptTick.x} y2={ptTick.y} stroke="#333" strokeWidth={isSuper ? 1.5 : 0.8} />
-                   {isText && drawRadialText(ang >= 360 ? ang-360 : ang, ang, R_BT + 20, "10", isSuper ? "#b91c1c" : "#111", isSuper ? "900" : "700")}
+                   <line x1={ptInner.x} y1={ptInner.y} x2={ptTick.x} y2={ptTick.y} stroke="#333" strokeWidth={isSuper ? 2 : (isMajor ? 1.2 : 0.8)} />
+                   {isText && drawRadialText(ang >= 360 ? ang-360 : ang, ang, R_BT + 22, "10", isSuper ? "#b91c1c" : "#111", isSuper ? "900" : "700")}
                 </g>
               );
             })}
@@ -323,21 +334,28 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
             const bt = getBT(gua.name);
             const startAng = gua.ang - 22.5;
             const endAng = gua.ang + 22.5;
-            let fillBg = `rgba(255,255,255,0.6)`;
+            let fillBg = isSimple ? 'rgba(255,255,255,0)' : `rgba(255,255,255,0.6)`;
             let fillText = '#333';
-            if (bt) {
+            if (bt && !isSimple) {
                fillBg = bt.info.type === 'Cát' ? `rgba(255,255,120,0.8)` : `rgba(180,255,180,0.8)`;
                fillText = bt.info.type === 'Cát' ? '#b91c1c' : '#1e40af';
             }
             const ptBT = polarToCartesian(cx, cy, (R_TS + R_BT)/2, gua.ang);
             return (
               <g key={`bt-${i}`}>
-                <path d={describeArc(cx, cy, R_TS, R_BT, startAng, endAng)} fill={fillBg} stroke="#666" strokeWidth="0.8" />
-                <line x1={polarToCartesian(cx, cy, R_CENTER, startAng).x} y1={polarToCartesian(cx, cy, R_CENTER, startAng).y} 
-                      x2={polarToCartesian(cx, cy, R_BT, startAng).x} y2={polarToCartesian(cx, cy, R_BT, startAng).y} stroke="#888" strokeWidth="1" />
+                <path d={describeArc(cx, cy, R_TS, R_BT, startAng, endAng)} fill={fillBg} stroke={isSimple ? '#555' : '#666'} strokeWidth={isSimple ? 1.5 : 0.8} />
+                {/* Đường chia 8 cung rõ từ tâm ra ngoài (chỉ chế độ đơn giản) */}
+                {isSimple && (
+                  <line x1={polarToCartesian(cx, cy, R_CENTER, startAng).x} y1={polarToCartesian(cx, cy, R_CENTER, startAng).y} 
+                        x2={polarToCartesian(cx, cy, R_COORD, startAng).x} y2={polarToCartesian(cx, cy, R_COORD, startAng).y} stroke="#333" strokeWidth="2" />
+                )}
+                {!isSimple && (
+                  <line x1={polarToCartesian(cx, cy, R_CENTER, startAng).x} y1={polarToCartesian(cx, cy, R_CENTER, startAng).y} 
+                        x2={polarToCartesian(cx, cy, R_BT, startAng).x} y2={polarToCartesian(cx, cy, R_BT, startAng).y} stroke="#888" strokeWidth="1" />
+                )}
                 
                 {bt && (
-                  <text x={ptBT.x} y={ptBT.y} fontSize="13" fontWeight="900" fill={fillText}
+                  <text x={ptBT.x} y={ptBT.y} fontSize="13" fontWeight="900" fill={isSimple ? '#1e293b' : fillText}
                         textAnchor="middle" dominantBaseline="central"
                         transform={`rotate(${gua.ang}, ${ptBT.x}, ${ptBT.y})`}>
                     <tspan x={ptBT.x} dy="-8">{bt.name.toUpperCase()}</tspan>
@@ -348,8 +366,8 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
             );
           })}
 
-          {/* ====== 2. VÒNG 12 TRƯỜNG SINH ====== */}
-          {tsPhases && tsPhases.map((phase, i) => {
+          {/* ====== 2. VÒNG 12 TRƯỜNG SINH (ẩn ở chế độ đơn giản) ====== */}
+          {!isSimple && tsPhases && tsPhases.map((phase, i) => {
             const startAng = -22.5 + i*30;
             const endAng = 7.5 + i*30;
             const midAng = -7.5 + i*30;
@@ -358,7 +376,7 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
             
             return (
               <g key={`ts-${i}`}>
-                <path d={describeArc(cx, cy, R_24M, R_TS, startAng, endAng)} fill={`rgba(245,245,250,0.95)`} stroke="#ccc" strokeWidth="0.5"/>
+                <path d={describeArc(cx, cy, R_24M, R_TS, startAng, endAng)} fill={ringFill(0.95)} stroke={ringStroke} strokeWidth={ringStrokeW}/>
                 <line x1={ptBorderBase.x} y1={ptBorderBase.y} x2={ptBorderEnd.x} y2={ptBorderEnd.y} stroke="#aaa" strokeWidth="0.8" />
                 {drawRadialText(phase, midAng, (R_24M + R_TS)/2, "11", "#92400E", "800")}
               </g>
@@ -370,12 +388,20 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
             const startAng = m.ang - 7.5;
             const endAng = m.ang + 7.5;
             const ptStart = polarToCartesian(cx, cy, R_STAR, startAng);
-            const ptEnd = polarToCartesian(cx, cy, R_24M, startAng);
+            // Ở chế độ đơn giản: Đường chia 24 sơn kéo dài ra ngoài vòng Tọa độ
+            const ptEnd24 = isSimple
+              ? polarToCartesian(cx, cy, R_COORD, startAng)
+              : polarToCartesian(cx, cy, R_24M, startAng);
+            const is8Dir = m.ang % 45 === 0;
             return (
               <g key={`mtn-${i}`}>
-                <path d={describeArc(cx, cy, R_STAR, R_24M, startAng, endAng)} fill={`rgba(255,255,255,0.95)`} stroke="#ccc" strokeWidth="0.5" />
-                <line x1={ptStart.x} y1={ptStart.y} x2={ptEnd.x} y2={ptEnd.y} stroke="#999" strokeWidth="0.8" strokeDasharray="3 2" />
-                {drawRadialText(m.name, m.ang, (R_STAR + R_24M)/2, "12", "#444", "800")}
+                <path d={describeArc(cx, cy, R_STAR, R_24M, startAng, endAng)} fill={ringFill(0.95)} stroke={ringStroke} strokeWidth={ringStrokeW} />
+                <line x1={ptStart.x} y1={ptStart.y} x2={ptEnd24.x} y2={ptEnd24.y}
+                      stroke={isSimple ? (is8Dir ? '#111' : dividerStroke) : '#999'}
+                      strokeWidth={isSimple ? (is8Dir ? 2.5 : 1.2) : 0.8}
+                      strokeDasharray={isSimple ? '0' : '3 2'} />
+                {drawRadialText(m.name, m.ang, (R_STAR + R_24M)/2, isSimple ? '13' : '12',
+                  isSimple ? '#1e293b' : '#444', '900')}
               </g>
             );
           })}
@@ -387,24 +413,23 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
             const cellData = chartData.finalGrid[GRID_INDEX[gua.ang]];
             if (!cellData) return null;
 
-            // Thu hẹp khoảng cách: Vận: R-20, Sơn/Hướng: R-50
             const ptBase = polarToCartesian(cx, cy, R_STAR - 20, gua.ang);
             const ptSitting = polarToCartesian(cx, cy, R_STAR - 52, gua.ang - 12);
             const ptFacing  = polarToCartesian(cx, cy, R_STAR - 52, gua.ang + 12);
 
             return (
               <g key={`star-${i}`}>
-                <path d={describeArc(cx, cy, R_GUA_HAOS, R_STAR, startAng, endAng)} fill={`rgba(255,255,255,0.95)`} stroke="#ccc" strokeWidth="0.5"/>
+                <path d={describeArc(cx, cy, R_GUA_HAOS, R_STAR, startAng, endAng)} fill={ringFill(0.95)} stroke={ringStroke} strokeWidth={ringStrokeW}/>
                 
-                <text x={ptBase.x} y={ptBase.y} fontSize="28" fontWeight="900" fill={starHex(cellData.base)} opacity="0.25" textAnchor="middle" dominantBaseline="central" transform={`rotate(${facingRot}, ${ptBase.x}, ${ptBase.y})`}>{cellData.base}</text>
+                <text x={ptBase.x} y={ptBase.y} fontSize="28" fontWeight="900" fill={starHex(cellData.base)} opacity={isSimple ? 0.12 : 0.25} textAnchor="middle" dominantBaseline="central" transform={`rotate(${facingRot}, ${ptBase.x}, ${ptBase.y})`}>{cellData.base}</text>
                 <text x={ptSitting.x} y={ptSitting.y} fontSize="24" fontWeight="900" fill={starHex(cellData.sitting)} textAnchor="middle" dominantBaseline="central" transform={`rotate(${facingRot}, ${ptSitting.x}, ${ptSitting.y})`}>{cellData.sitting}</text>
                 <text x={ptFacing.x} y={ptFacing.y} fontSize="24" fontWeight="900" fill={starHex(cellData.facing)} textAnchor="middle" dominantBaseline="central" transform={`rotate(${facingRot}, ${ptFacing.x}, ${ptFacing.y})`}>{cellData.facing}</text>
               </g>
             );
           })}
 
-          {/* ====== 5. VÒNG HÀO QUÁI TIÊN THIÊN (Bác bỏ tên, dùng Gạch) ====== */}
-          {GUA_8.map((gua, i) => {
+          {/* ====== 5. VÒNG HÀO QUÁI TIÊN THIÊN (ẩn ở chế độ đơn giản) ====== */}
+          {!isSimple && GUA_8.map((gua, i) => {
             const startAng = gua.ang - 22.5;
             const endAng = gua.ang + 22.5;
             return (
@@ -415,12 +440,29 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
             );
           })}
 
+          {/* ====== 5b. CHẾ ĐỘ ĐƠN GIẢN: Đường chia 8 cung từ tâm ra ngoài, tên hướng rõ ====== */}
+          {isSimple && GUA_8.map((gua, i) => {
+            const startAng = gua.ang - 22.5;
+            const endAng = gua.ang + 22.5;
+            const ptLabel = polarToCartesian(cx, cy, R_CENTER + 24, gua.ang);
+            return (
+              <g key={`simple-gua-${i}`}>
+                <path d={describeArc(cx, cy, R_CENTER, R_GUA_HAOS, startAng, endAng)} fill='rgba(255,255,255,0)' stroke='#444' strokeWidth="1.2" />
+                <text x={ptLabel.x} y={ptLabel.y} fontSize="11" fontWeight="900" fill="#1e293b"
+                      textAnchor="middle" dominantBaseline="central"
+                      transform={`rotate(${gua.ang}, ${ptLabel.x}, ${ptLabel.y})`}>
+                  {gua.name}
+                </text>
+              </g>
+            );
+          })}
+
         </g>
         
           {/* ====== TRUNG CUNG VÀ TRỤC TỌA HƯỚNG CỐ ĐỊNH ====== */}
           {/* LA KINH CỐ ĐỊNH, MŨI TÊN CHỈ CHUẨN LÊN TRÊN */}
           <g>
-            <circle cx={cx} cy={cy} r={R_CENTER} fill={`rgba(255,255,255,0.98)`} stroke="#444" strokeWidth="2" />
+            <circle cx={cx} cy={cy} r={R_CENTER} fill={isSimple ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.98)'} stroke="#444" strokeWidth="2" />
             
             {/* ĐIỂM ĐỎ TRUNG TÂM LA KINH */}
           <circle cx={cx} cy={cy} r="6" fill="#dc2626" />
@@ -449,10 +491,10 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
           })()}
 
           {/* TRỤC TỌA HƯỚNG TỪ DƯỚI LÊN ĐỈNH */}
-          <line x1={cx} y1={cy + R_COORD + 10} x2={cx} y2={cy - R_COORD - 20} stroke="#dc2626" strokeWidth="2.5" strokeDasharray="5 3" opacity="0.8" />
-            <polygon points={`${cx},${cy - R_COORD - 25} ${cx - 8},${cy - R_COORD - 10} ${cx + 8},${cy - R_COORD - 10}`} fill="#dc2626" />
-            <text x={cx} y={cy - R_COORD - 40} fontSize="14" fontWeight="900" fill="#dc2626" textAnchor="middle">HƯỚNG</text>
-            <text x={cx} y={cy + R_COORD + 30} fontSize="14" fontWeight="900" fill="#dc2626" textAnchor="middle">TỌA</text>
+          <line x1={cx} y1={cy + R_COORD + 10} x2={cx} y2={cy - R_COORD - 20} stroke="#dc2626" strokeWidth={isSimple ? 3.5 : 2.5} strokeDasharray={isSimple ? '0' : '5 3'} opacity="0.9" />
+            <polygon points={`${cx},${cy - R_COORD - 28} ${cx - 10},${cy - R_COORD - 10} ${cx + 10},${cy - R_COORD - 10}`} fill="#dc2626" />
+            <text x={cx} y={cy - R_COORD - 46} fontSize={isSimple ? '16' : '14'} fontWeight="900" fill="#dc2626" textAnchor="middle">HƯỚNG</text>
+            <text x={cx} y={cy + R_COORD + 34} fontSize={isSimple ? '16' : '14'} fontWeight="900" fill="#dc2626" textAnchor="middle">TỌA</text>
           </g>
         </g>
       </svg>
@@ -570,12 +612,47 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
                   )}
                 </div>
 
+                {/* ──── CHẾ ĐỘ XEM LA KINH ──── */}
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-2 block uppercase tracking-wider">Chế độ xem La Kinh</label>
+                  <div className="flex gap-2">
+                    <button onClick={() => setViewMode('full')}
+                      className={`flex-1 py-2 rounded-xl text-xs font-black transition-all border ${
+                        viewMode === 'full' ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                      }`}>
+                      🗄 Đầy Đủ
+                    </button>
+                    <button onClick={() => setViewMode('simple')}
+                      className={`flex-1 py-2 rounded-xl text-xs font-black transition-all border ${
+                        viewMode === 'simple' ? 'bg-slate-700 text-white border-slate-700 shadow' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                      }`}>
+                      ☯ Đơn Giản
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1.5 leading-relaxed">
+                    {viewMode === 'simple' ? 'Nền trong suốt, ẩn hào Bát Quái và Trường Sinh — làm rõ đường Sơn / Hướng.' : 'Hiển thị đầy đủ Bát Trạch, Trường Sinh và hào Bát Quái.'}
+                  </p>
+                </div>
+
+                {/* ──── ĐỘ TRONG SUỐT LA KINH ──── */}
                 <div>
                   <label className="text-xs font-bold text-slate-500 mb-2 flex justify-between">
                     <span>Độ trong suốt Lưới La Kinh</span>
                     <span className="text-indigo-600">{Math.round(overlayOpacity * 100)}%</span>
                   </label>
-                  <input type="range" min="0.2" max="1" step="0.05" value={overlayOpacity} onChange={e => setOverlayOpacity(parseFloat(e.target.value))} className="w-full accent-indigo-600" />
+                  <input type="range" min="0.05" max="1" step="0.05" value={overlayOpacity} onChange={e => setOverlayOpacity(parseFloat(e.target.value))} className="w-full accent-indigo-600" />
+                </div>
+
+                {/* ──── TĂNG SẮC NÉT ẢNH BẢN VẼ ──── */}
+                <div>
+                  <label className="text-xs font-bold text-slate-500 mb-2 flex justify-between">
+                    <span>Tăng Nét Bản Vẽ Công Trình</span>
+                    <span className="text-indigo-600">{imgContrast.toFixed(1)}x</span>
+                  </label>
+                  <input type="range" min="1" max="2.5" step="0.1" value={imgContrast}
+                    onChange={e => setImgContrast(parseFloat(e.target.value))}
+                    className="w-full accent-slate-700" disabled={!image} />
+                  <p className="text-[10px] text-slate-400 mt-1">Tăng độ tương phản làm đậm nét đường vẽ kiến trúc.</p>
                 </div>
 
                 <div>
@@ -633,7 +710,12 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
                 window.addEventListener('mouseup', handleMouseUp);
               }}
             >
-              <img id="floor-plan-image" src={image} alt="Mặt bằng" className="max-w-[800px] opacity-80 pointer-events-none" />
+              <img id="floor-plan-image" src={image} alt="Mặt bằng" className="max-w-[800px] pointer-events-none"
+                style={{
+                  opacity: 0.9,
+                  filter: `contrast(${imgContrast}) ${imgContrast > 1.2 ? 'brightness(1.05) saturate(0.8)' : ''}`,
+                  imageRendering: 'crisp-edges'
+                }} />
               
               {/* Lớp SVG hiển thị đường vẽ Tâm đa giác trên mặt bằng gốc */}
               <svg className="absolute inset-0 pointer-events-none" style={{width: '100%', height: '100%', overflow:'visible'}}>
