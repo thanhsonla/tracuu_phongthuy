@@ -242,7 +242,7 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
 
   // Khi chế độ đơn giản: các vòng nền trong suốt, viền rõ hơn
   const isSimple = viewMode === 'simple';
-  const ringFill = (alpha = 0.95) => isSimple ? 'rgba(255,255,255,0)' : `rgba(255,255,255,${alpha})`;
+  const ringFill = (alpha = 0.95) => isSimple ? 'rgba(255,255,255,0)' : `rgba(255,255,255,${alpha * overlayOpacity})`;
   const ringStroke = isSimple ? '#444' : '#ccc';
   const ringStrokeW = isSimple ? 1.2 : 0.5;
   const dividerStroke = isSimple ? '#222' : '#999';
@@ -303,13 +303,13 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
     return (
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" className="w-full h-full" style={{overflow:'visible'}} xmlns="http://www.w3.org/2000/svg">
         
-        <g opacity={overlayOpacity}>
+        <g>
           {/* LA KINH CỐ ĐỊNH BẮC (TÝ) Ở TRUYỀN HƯỚNG TRÊN (0 ĐỘ). XOAY OFFSET -facingRot + compassRotation bù trừ */}
           <g transform={`rotate(${-facingRot + compassRotation}, ${cx}, ${cy})`}>
 
             {/* ====== 0. VÒNG TỌA ĐỘ NGOÀI CÙNG ====== */}
             <g>
-              <circle cx={cx} cy={cy} r={R_COORD} fill={isSimple ? 'rgba(255,255,255,0)' : 'rgba(255,255,255,0.92)'} stroke="#111" strokeWidth={isSimple ? 2.5 : 2} />
+              <circle cx={cx} cy={cy} r={R_COORD} fill={isSimple ? 'rgba(255,255,255,0)' : `rgba(255,255,255,${0.92 * overlayOpacity})`} stroke="#111" strokeWidth={isSimple ? 2.5 : 2} />
               <circle cx={cx} cy={cy} r={R_BT} fill="none" stroke={ringStroke} strokeWidth={isSimple ? 1.5 : 1} />
             {Array.from({length: 72}).map((_, i) => {
               const ang = i * 5;
@@ -334,10 +334,10 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
             const bt = getBT(gua.name);
             const startAng = gua.ang - 22.5;
             const endAng = gua.ang + 22.5;
-            let fillBg = isSimple ? 'rgba(255,255,255,0)' : `rgba(255,255,255,0.6)`;
+            let fillBg = isSimple ? 'rgba(255,255,255,0)' : `rgba(255,255,255,${0.6 * overlayOpacity})`;
             let fillText = '#333';
             if (bt && !isSimple) {
-               fillBg = bt.info.type === 'Cát' ? `rgba(255,255,120,0.8)` : `rgba(180,255,180,0.8)`;
+               fillBg = bt.info.type === 'Cát' ? `rgba(255,255,120,${0.8 * overlayOpacity})` : `rgba(180,255,180,${0.8 * overlayOpacity})`;
                fillText = bt.info.type === 'Cát' ? '#b91c1c' : '#1e40af';
             }
             const ptBT = polarToCartesian(cx, cy, (R_TS + R_BT)/2, gua.ang);
@@ -434,7 +434,7 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
             const endAng = gua.ang + 22.5;
             return (
                <g key={`hao-${i}`}>
-                 <path d={describeArc(cx, cy, R_CENTER, R_GUA_HAOS, startAng, endAng)} fill={`rgba(240,248,255,0.95)`} stroke="#ccc" strokeWidth="0.5" />
+                 <path d={describeArc(cx, cy, R_CENTER, R_GUA_HAOS, startAng, endAng)} fill={`rgba(240,248,255,${0.95 * overlayOpacity})`} stroke="#ccc" strokeWidth="0.5" />
                  {drawTrigram(gua.name, gua.ang)}
                </g>
             );
@@ -462,7 +462,7 @@ const FloorPlanOverlay = ({ project, chartData, onSaveOverlay }) => {
           {/* ====== TRUNG CUNG VÀ TRỤC TỌA HƯỚNG CỐ ĐỊNH ====== */}
           {/* LA KINH CỐ ĐỊNH, MŨI TÊN CHỈ CHUẨN LÊN TRÊN */}
           <g>
-            <circle cx={cx} cy={cy} r={R_CENTER} fill={isSimple ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.98)'} stroke="#444" strokeWidth="2" />
+            <circle cx={cx} cy={cy} r={R_CENTER} fill={isSimple ? 'rgba(255,255,255,0)' : `rgba(255,255,255,${0.98 * overlayOpacity})`} stroke="#444" strokeWidth="2" />
             
             {/* ĐIỂM ĐỎ TRUNG TÂM LA KINH */}
           <circle cx={cx} cy={cy} r="6" fill="#dc2626" />
