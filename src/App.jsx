@@ -10,6 +10,7 @@ import AccountScreen from './components/AccountScreen';
 import ProjectMapView from './components/ProjectMapView';
 import GuestWizard from './components/GuestWizard';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import MobileBottomNav from './components/MobileBottomNav';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('TRACKER');
@@ -156,7 +157,7 @@ export default function App() {
       {/* GLOBAL HEADER */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
         <div className="max-w-6xl mx-auto px-4">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center py-3 gap-4">
+          <div className="flex flex-row justify-between items-center md:flex-row md:justify-between md:items-center py-3 gap-4">
             
             <div className="flex items-center gap-2 text-indigo-900 cursor-pointer" onClick={() => setCurrentView('TRACKER')}>
                <Compass className="text-red-600" size={32} />
@@ -166,9 +167,43 @@ export default function App() {
                </div>
             </div>
 
+            {/* MOBILE ONLY: compact user chip in header */}
+            {!isSharedMode && (
+              <div className="flex md:hidden items-center gap-2">
+                {currentUser ? (
+                  <>
+                    <button
+                      id="mobile-header-account-btn"
+                      onClick={() => setCurrentView('ACCOUNT')}
+                      className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-xl"
+                    >
+                      <UserIcon size={14} className="text-indigo-600" />
+                      <span className="text-xs font-bold text-indigo-700 max-w-[80px] truncate">{currentUser.username}</span>
+                    </button>
+                    <button
+                      id="mobile-header-logout-btn"
+                      onClick={handleLogout}
+                      className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                      title="Đăng xuất"
+                    >
+                      <LogOut size={18} />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    id="mobile-header-login-btn"
+                    onClick={() => setCurrentView('LOGIN')}
+                    className="flex items-center gap-1.5 bg-slate-900 text-white px-3 py-1.5 rounded-xl text-xs font-bold"
+                  >
+                    <UserIcon size={14} /> Đăng Nhập
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* TOP NAVIGATION TABS */}
             {!isSharedMode ? (
-            <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+            <div className="hidden md:flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
                <nav className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-full md:w-auto overflow-x-auto">
                  {navItems.map(nav => {
                    const Icon = nav.icon;
@@ -217,7 +252,7 @@ export default function App() {
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <main className="p-4 md:p-8">
+      <main className="p-4 md:p-8 pb-24 md:pb-8">
          <div className="max-w-6xl mx-auto animate-slide-up">
            
            {currentView === 'LOGIN' && !currentUser && (
@@ -325,6 +360,17 @@ export default function App() {
           />
         </ErrorBoundary>
       )}
+
+      {/* MOBILE BOTTOM NAVIGATION - chỉ hiển thị trên điện thoại */}
+      <MobileBottomNav
+        currentView={currentView}
+        setCurrentView={(view, action) => {
+          if (view === 'CREATE' && action === 'reset') setCurrentProject(null);
+          setCurrentView(view);
+        }}
+        currentUser={currentUser}
+        isSharedMode={isSharedMode}
+      />
     </div>
   );
 }
