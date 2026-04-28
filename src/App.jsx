@@ -374,7 +374,7 @@ export default function App() {
                      </div>
                   </div>
                )}
-               <TimeStarTracker />
+               <TimeStarTracker currentUser={currentUser} />
              </>
            )}
            

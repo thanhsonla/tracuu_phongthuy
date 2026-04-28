@@ -452,7 +452,7 @@ const MiniCalendar = ({ selectedDateStr, onSelect }) => {
 };
 
 // --- Bảng Widget Real-time Hôm nay ---
-const TodayWidget = ({ projectContext }) => {
+const TodayWidget = ({ projectContext, currentUser }) => {
   const [selectedDate, setSelectedDate] = useState('');
   const [now, setNow] = useState(new Date());
 
@@ -482,12 +482,14 @@ const TodayWidget = ({ projectContext }) => {
                  Trở Về Hôm Nay
                </button>
             )}
-            <input 
-              type="date" 
-              value={selectedDate || getLocalYMD(now)}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-slate-900 border border-slate-600 text-white font-bold px-3 py-2 rounded-xl text-sm outline-none focus:border-amber-500 shadow-inner w-full sm:w-auto"
-            />
+            {currentUser && (
+               <input 
+                 type="date" 
+                 value={selectedDate || getLocalYMD(now)}
+                 onChange={(e) => setSelectedDate(e.target.value)}
+                 className="bg-slate-900 border border-slate-600 text-white font-bold px-3 py-2 rounded-xl text-sm outline-none focus:border-amber-500 shadow-inner w-full sm:w-auto"
+               />
+            )}
           </div>
        </div>
        <TrackerResultCard 
@@ -501,7 +503,7 @@ const TodayWidget = ({ projectContext }) => {
 };
 
 
-const TimeStarTracker = ({ projectContext }) => {
+const TimeStarTracker = ({ projectContext, currentUser }) => {
   const [activeTab, setActiveTab] = useState('today');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -598,7 +600,7 @@ const TimeStarTracker = ({ projectContext }) => {
     return results;
   }, [activeTab, searchTargetStar, searchDirection, searchLimit]);
 
-  const tabs = [
+  const allTabs = [
     { id: 'today',  label: '🔥 Hôm Nay', color: 'bg-red-600' },
     { id: 'year',   label: 'Năm',     color: 'bg-indigo-600' },
     { id: 'month',  label: 'Tháng',   color: 'bg-indigo-600' },
@@ -607,6 +609,15 @@ const TimeStarTracker = ({ projectContext }) => {
     { id: 'search', label: '🔍 Truy Vấn', color: 'bg-amber-600' },
     { id: 'tietKhi', label: '☀️ Tiết Khí', color: 'bg-orange-600' },
   ];
+
+  const tabs = currentUser ? allTabs : allTabs.filter(t => !['month', 'day', 'hour', 'search'].includes(t.id));
+
+  // If a tab is selected but user logs out, fallback
+  useEffect(() => {
+    if (!currentUser && ['month', 'day', 'hour', 'search'].includes(activeTab)) {
+      setActiveTab('today');
+    }
+  }, [currentUser, activeTab]);
 
   return (
     <div className={`bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl md:p-8 shadow-2xl border ${hasDungThan ? 'p-1 mt-6 border-emerald-500/50 shadow-emerald-900/40' : 'p-4 border-slate-700'}`}>
@@ -647,7 +658,7 @@ const TimeStarTracker = ({ projectContext }) => {
       </div>
 
       <div className="px-4 md:px-0">
-         {activeTab === 'today' && <TodayWidget projectContext={projectContext} />}
+         {activeTab === 'today' && <TodayWidget projectContext={projectContext} currentUser={currentUser} />}
       </div>
 
       {/* Tùy chọn Tra cứu cơ bản (Năm/Tháng/Ngày/Giờ) */}
