@@ -150,6 +150,16 @@ if (!supabase) {
         console.log('Migrated SQLite: Added mime_type to documents');
       }
     } catch(e) { }
+
+    // Khởi tạo bảng usage_logs local
+    dbLocal.exec(`
+    CREATE TABLE IF NOT EXISTS usage_logs (
+      id TEXT PRIMARY KEY,
+      timestamp TEXT DEFAULT (datetime('now','localtime')),
+      user_type TEXT NOT NULL,
+      user_id TEXT DEFAULT NULL
+    )
+    `);
     }
   }
 }
@@ -436,6 +446,64 @@ const DB = {
        const rows = dbLocal.prepare('SELECT id, username, email, role, permissions, created_at, last_login FROM users ORDER BY created_at DESC').all();
        return rows.map(u => ({ ...u, permissions: JSON.parse(u.permissions || '{"TRACKER":true,"CREATE":true,"LUBAN":true,"LIBRARY":true}') }));
     }
+  },
+
+  async logUsage(userType, userId = null) {
+    const id = `log_${Date.now()}_${Math.floor(Math.random()*10000)}`;
+    const payload = { id, user_type: userType, user_id: userId, timestamp: new Date().toISOString() };
+    if (isCloud) {
+       await supabase.from('usage_logs').insert([payload]);
+    } else {
+       dbLocal.prepare('INSERT INTO usage_logs (id, user_type, user_id, timestamp) VALUES (?, ?, ?, ?)').run(id, userType, userId, payload.timestamp);
+    }
+  },
+
+  async getUsageStats() {
+    let logs = [];
+    if (isCloud) {
+       const thirtyDaysAgo = new Date();
+       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+       const { data } = await supabase.from('usage_logs').select('user_type, timestamp').gte('timestamp', thirtyDaysAgo.toISOString());
+       logs = data || [];
+    } else {
+       logs = dbLocal.prepare(`SELECT user_type, timestamp FROM usage_logs WHERE timestamp >= datetime('now', '-30 days', 'localtime')`).all();
+    }
+
+    const stats = {
+      today: { guest: 0, member: 0 },
+      week: { guest: 0, member: 0 },
+      month: { guest: 0, member: 0 }
+    };
+    
+    // Set 'now' to end of today for stable comparison, or simply calculate date delta
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
+    logs.forEach(log => {
+      const logDate = new Date(log.timestamp);
+      const logStr = logDate.toISOString().split('T')[0];
+      
+      // Calculate diff in days properly
+      const diffTime = now.getTime() - logDate.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      const isMember = log.user_type !== 'GUEST';
+
+      // Today
+      if (logStr === todayStr) {
+         if (isMember) stats.today.member++; else stats.today.guest++;
+      }
+      // Week (Last 7 days including today)
+      if (diffDays <= 7) {
+         if (isMember) stats.week.member++; else stats.week.guest++;
+      }
+      // Month (Last 30 days including today)
+      if (diffDays <= 30) {
+         if (isMember) stats.month.member++; else stats.month.guest++;
+      }
+    });
+
+    return stats;
   }
 };
 
@@ -625,6 +693,30 @@ app.delete('/api/users/:id', authenticateToken, async (req, res) => {
   }
 });
 
+
+// ======================================================================
+// API: ANALYTICS
+// ======================================================================
+
+app.post('/api/analytics/ping', async (req, res) => {
+  try {
+    const { userType, userId } = req.body;
+    await DB.logUsage(userType || 'GUEST', userId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/analytics/stats', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Chỉ Admin mới có quyền xem thống kê' });
+    const stats = await DB.getUsageStats();
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ======================================================================
 // API: HỒ SƠ DỰ ÁN

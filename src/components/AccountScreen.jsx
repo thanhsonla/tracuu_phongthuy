@@ -75,6 +75,21 @@ function ActivityRow({ project, onClick, index }) {
 // ─── Dashboard View (Tab mặc định) ───────────────────────────────────────────
 function DashboardView({ currentUser, projects, onOpenProject }) {
   const isAdmin = currentUser?.role === 'ADMIN';
+  const [analyticsStats, setAnalyticsStats] = useState(null);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetch('/api/analytics/stats', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('hkpt_token')}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) setAnalyticsStats(data);
+      })
+      .catch(err => console.error(err));
+    }
+  }, [isAdmin]);
+
   const myProjects = projects.filter(p =>
     isAdmin ? p.owner_id === currentUser.id : true
   );
@@ -258,6 +273,47 @@ function DashboardView({ currentUser, projects, onOpenProject }) {
               </div>
             )}
           </div>
+
+          {/* Thống kê truy cập (Chỉ Admin) */}
+          {isAdmin && analyticsStats && (
+            <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-5 animate-slide-up">
+              <h3 className="font-black text-slate-700 text-sm flex items-center gap-2 mb-4">
+                <Activity size={16} className="text-indigo-500" /> Thống Kê Truy Cập
+              </h3>
+              <div className="space-y-4">
+                {[
+                  { label: 'Hôm nay', data: analyticsStats.today },
+                  { label: '7 Ngày qua', data: analyticsStats.week },
+                  { label: '30 Ngày qua', data: analyticsStats.month }
+                ].map((stat, idx) => {
+                  const total = stat.data.guest + stat.data.member;
+                  const guestPct = total > 0 ? Math.round((stat.data.guest / total) * 100) : 0;
+                  const memberPct = total > 0 ? 100 - guestPct : 0;
+                  
+                  return (
+                    <div key={idx}>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-xs font-bold text-slate-600">{stat.label}</span>
+                        <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">Tổng: {total}</span>
+                      </div>
+                      <div className="flex h-3 rounded-full overflow-hidden bg-slate-100 gap-[1px]">
+                         {memberPct > 0 && <div className="h-full bg-indigo-500 transition-all duration-700 relative group cursor-help" style={{ width: `${memberPct}%` }}>
+                             <div className="absolute opacity-0 group-hover:opacity-100 -top-7 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg pointer-events-none whitespace-nowrap z-10 transition-opacity shadow-lg">Thành viên: {stat.data.member}</div>
+                         </div>}
+                         {guestPct > 0 && <div className="h-full bg-slate-300 transition-all duration-700 relative group cursor-help" style={{ width: `${guestPct}%` }}>
+                             <div className="absolute opacity-0 group-hover:opacity-100 -top-7 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg pointer-events-none whitespace-nowrap z-10 transition-opacity shadow-lg">Khách: {stat.data.guest}</div>
+                         </div>}
+                      </div>
+                      <div className="flex justify-between mt-1.5 px-1">
+                         <span className="text-[9px] font-black text-indigo-500 tracking-wider uppercase">{memberPct}% TV</span>
+                         <span className="text-[9px] font-black text-slate-400 tracking-wider uppercase">{guestPct}% Khách</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Role badge card */}
           <div

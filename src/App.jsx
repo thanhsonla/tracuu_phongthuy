@@ -137,6 +137,24 @@ export default function App() {
     fetchProjects();
   }, [currentUser]);
 
+  // Analytics Ping (Chạy 1 lần mỗi Session khi đã nạp xong Auth)
+  useEffect(() => {
+    if (isCheckingAuth) return;
+    if (isSharedMode) return; // Không tính cho chế độ xem chung (tuỳ chọn, tạm bỏ qua share mode)
+    
+    const pinged = sessionStorage.getItem('hkpt_session_pinged');
+    if (!pinged) {
+       const uType = currentUser ? (currentUser.role === 'ADMIN' ? 'ADMIN' : 'USER') : 'GUEST';
+       fetch('/api/analytics/ping', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userType: uType, userId: currentUser?.id })
+       }).catch(e => console.error('Lỗi ping analytics', e));
+       
+       sessionStorage.setItem('hkpt_session_pinged', 'true');
+    }
+  }, [isCheckingAuth, currentUser, isSharedMode]);
+
   const navItemsRaw = [
     { id: 'TRACKER', label: 'Tra Cứu Phi Tinh', icon: Clock, color: 'text-amber-500' },
     { id: 'CREATE', label: 'Lập Dự Án', icon: PlusCircle, color: 'text-indigo-500' },
