@@ -482,14 +482,12 @@ const TodayWidget = ({ projectContext, currentUser }) => {
                  Trở Về Hôm Nay
                </button>
             )}
-            {currentUser && (
-               <input 
-                 type="date" 
-                 value={selectedDate || getLocalYMD(now)}
-                 onChange={(e) => setSelectedDate(e.target.value)}
-                 className="bg-slate-900 border border-slate-600 text-white font-bold px-3 py-2 rounded-xl text-sm outline-none focus:border-amber-500 shadow-inner w-full sm:w-auto"
-               />
-            )}
+            <input 
+              type="date" 
+              value={selectedDate || getLocalYMD(now)}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="bg-slate-900 border border-slate-600 text-white font-bold px-3 py-2 rounded-xl text-sm outline-none focus:border-amber-500 shadow-inner w-full sm:w-auto"
+            />
           </div>
        </div>
        <TrackerResultCard 
@@ -610,11 +608,11 @@ const TimeStarTracker = ({ projectContext, currentUser }) => {
     { id: 'tietKhi', label: '☀️ Tiết Khí', color: 'bg-orange-600' },
   ];
 
-  const tabs = currentUser ? allTabs : allTabs.filter(t => !['month', 'day', 'hour', 'search'].includes(t.id));
+  const tabs = currentUser ? allTabs : allTabs.filter(t => !['month', 'hour'].includes(t.id));
 
   // If a tab is selected but user logs out, fallback
   useEffect(() => {
-    if (!currentUser && ['month', 'day', 'hour', 'search'].includes(activeTab)) {
+    if (!currentUser && ['month', 'hour'].includes(activeTab)) {
       setActiveTab('today');
     }
   }, [currentUser, activeTab]);
