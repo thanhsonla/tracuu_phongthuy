@@ -90,6 +90,31 @@ export default function LuBanRuler() {
   const [unit, setUnit] = useState('mm'); // 'cm' or 'mm'
   const [inputValue, setInputValue] = useState(810); // default in mm
   const [activeTarget, setActiveTarget] = useState(null);
+  const [activeRuler, setActiveRuler] = useState(null);
+  const inputRef = React.useRef(null);
+
+  const handleTargetClick = (t) => {
+    if (activeTarget === t.id) {
+      setActiveTarget(null);
+      setActiveRuler(null);
+    } else {
+      setActiveTarget(t.id);
+      setActiveRuler(t.rulerTarget);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  };
+
+  const handleRulerClick = (rLength) => {
+    if (activeRuler === rLength) {
+      setActiveRuler(null);
+      setActiveTarget(null);
+    } else {
+      setActiveRuler(rLength);
+      const target = MEASUREMENT_TARGETS.find(t => t.rulerTarget === rLength);
+      setActiveTarget(target ? target.id : null);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  };
 
   // Handle unit switch
   const handleUnitToggle = (selectedUnit) => {
@@ -155,8 +180,7 @@ export default function LuBanRuler() {
 
   const results = RULERS.map(ruler => analyze(ruler, measureInMm));
 
-  const rulerTargetValue = MEASUREMENT_TARGETS.find(t => t.id === activeTarget)?.rulerTarget;
-  const currentPresets = rulerTargetValue ? QUICK_PRESETS[rulerTargetValue] : DEFAULT_PRESETS;
+  const currentPresets = activeRuler ? QUICK_PRESETS[activeRuler] : DEFAULT_PRESETS;
 
   return (
     <div className="bg-white rounded-3xl p-6 md:p-10 shadow-2xl border border-slate-200">
@@ -183,7 +207,7 @@ export default function LuBanRuler() {
             {MEASUREMENT_TARGETS.map(t => (
                <button 
                  key={t.id} 
-                 onClick={() => setActiveTarget(activeTarget === t.id ? null : t.id)}
+                 onClick={() => handleTargetClick(t)}
                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${activeTarget === t.id ? 'bg-indigo-600 text-white border-indigo-700 shadow-md scale-105' : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'}`}
                >
                  {t.label}
@@ -198,10 +222,11 @@ export default function LuBanRuler() {
             <label className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-3">2. Nhập Kích Thước ({unit})</label>
             <div className="relative w-full max-w-sm">
                <input 
+                 ref={inputRef}
                  type="number" 
                  value={inputValue === '' ? '' : inputValue} 
                  onChange={handleInputChange}
-                 className="w-full bg-white text-slate-800 font-black text-4xl md:text-5xl px-6 py-6 rounded-2xl border-2 border-amber-400 focus:border-amber-500 outline-none text-center shadow-inner" 
+                 className="w-full bg-white text-slate-800 font-black text-4xl md:text-5xl px-6 py-6 rounded-2xl border-2 border-amber-400 focus:border-amber-500 outline-none text-center shadow-inner transition-all focus:ring-4 focus:ring-amber-400/20" 
                />
                <span className="absolute top-1/2 -translate-y-1/2 right-6 text-slate-300 font-bold text-xl">{unit}</span>
             </div>
@@ -220,15 +245,14 @@ export default function LuBanRuler() {
       {/* Results Display */}
       <div className="space-y-8">
         {results.map((res, i) => {
-          const rulerTargetValue = MEASUREMENT_TARGETS.find(t => t.id === activeTarget)?.rulerTarget;
-          const isFocused = activeTarget ? (res.rLength === rulerTargetValue) : true;
-          const focusClasses = activeTarget ? (isFocused ? 'ring-4 ring-indigo-400/50 scale-[1.02] shadow-xl z-10 transition-all' : 'opacity-40 grayscale-[50%] scale-[0.98] transition-all') : 'transition-all';
+          const isFocused = activeRuler ? (res.rLength === activeRuler) : true;
+          const focusClasses = activeRuler ? (isFocused ? 'ring-4 ring-indigo-400/50 scale-[1.02] shadow-xl z-10 transition-all cursor-default' : 'opacity-40 grayscale-[50%] scale-[0.98] transition-all cursor-pointer hover:opacity-70') : 'transition-all cursor-pointer hover:scale-[1.01] hover:shadow-lg';
 
           return (
-          <div key={i} className={`p-5 md:p-6 rounded-2xl border relative ${res.mainSegment.isGood ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50 border-slate-200'} ${focusClasses}`}>
-            {isFocused && activeTarget && <div className="absolute -top-3 -right-3 bg-indigo-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full shadow-md z-20">Thước Khuyên Dùng</div>}
+          <div key={i} onClick={() => handleRulerClick(res.rLength)} className={`p-5 md:p-6 rounded-2xl border relative ${res.mainSegment.isGood ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50 border-slate-200'} ${focusClasses}`}>
+            {isFocused && activeRuler && <div className="absolute -top-3 -right-3 bg-indigo-600 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full shadow-md z-20">Đang Chọn</div>}
             
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex justify-between items-start mb-4 pointer-events-none">
               <div>
                 <h3 className="font-black text-lg text-slate-800 mb-1">{res.rulerName}</h3>
                 <p className="text-xs font-bold text-slate-400 uppercase">{res.desc}</p>
