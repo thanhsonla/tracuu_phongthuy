@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, PlusCircle, Library as LibraryIcon, MapPin, ClipboardList, UserPlus, User as UserIcon } from 'lucide-react';
+import { Clock, PlusCircle, Library as LibraryIcon, MapPin, ClipboardList, UserPlus, User as UserIcon, Ruler } from 'lucide-react';
 
 // ─────────────────────────────────────────────
 //  MobileBottomNav
@@ -58,6 +58,13 @@ export default function MobileBottomNav({ currentView, setCurrentView, currentUs
       activeBg: '#fffbeb',
     },
     {
+      id: 'LUBAN',
+      label: 'Thước',
+      icon: Ruler,
+      activeColor: '#10b981',
+      activeBg: '#f0fdf4',
+    },
+    {
       id: 'GUEST_WIZARD',
       label: 'Khảo Sát',
       icon: ClipboardList,
@@ -96,10 +103,10 @@ export default function MobileBottomNav({ currentView, setCurrentView, currentUs
     else setCurrentView && setCurrentView(id);
   };
 
-  // Xác định tab nào đang active (RESULT / LUBAN cũng highlight CREATE)
+  // Xác định tab nào đang active
   const getActiveTab = () => {
     if (currentView === 'RESULT') return currentUser ? 'CREATE' : 'TRACKER';
-    if (currentView === 'LUBAN') return 'TRACKER';
+    if (currentView === 'LUBAN' && currentUser) return 'TRACKER'; // Member ko có tab LUBAN ở bottom nav
     return currentView;
   };
   const activeTab = getActiveTab();
