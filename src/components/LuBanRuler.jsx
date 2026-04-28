@@ -51,10 +51,27 @@ const LUBAN_38_8 = {
   ]
 };
 
-const RULERS = [LUBAN_52_2, LUBAN_42_9, LUBAN_38_8];
+const LUBAN_46_0 = {
+  name: 'Thước 46.08cm (Khối Xây Đặc)',
+  desc: 'Đo bệ bếp, bậc thềm, trụ cột, đồ nội thất (theo chuẩn Minh - Thanh).',
+  length: 460.8, // in mm
+  mainSegments: [
+    { name: 'Tài', isGood: true, subs: ['Tài Đức', 'Bảo Khố', 'Lục Hợp', 'Nghênh Phúc'] },
+    { name: 'Bệnh', isGood: false, subs: ['Thoái Tài', 'Công Sự', 'Lao Chấp', 'Cô Quả'] },
+    { name: 'Ly', isGood: false, subs: ['Trưởng Hố', 'Kiếp Tài', 'Quan Quỷ', 'Thất Thoát'] },
+    { name: 'Nghĩa', isGood: true, subs: ['Thêm Đinh', 'Ích Lợi', 'Quý Tử', 'Đại Cát'] },
+    { name: 'Quan', isGood: true, subs: ['Thuận Khoa', 'Hoành Tài', 'Tiến Ích', 'Phú Quý'] },
+    { name: 'Kiếp', isGood: false, subs: ['Tử Biệt', 'Thoái Khẩu', 'Ly Hương', 'Tài Thất'] },
+    { name: 'Hại', isGood: false, subs: ['Tai Chí', 'Tử Tuyệt', 'Lâm Bệnh', 'Khẩu Thiệt'] },
+    { name: 'Bản', isGood: true, subs: ['Tài Chí', 'Đăng Khoa', 'Tiến Bảo', 'Hưng Vượng'] }
+  ]
+};
+
+const RULERS = [LUBAN_52_2, LUBAN_46_0, LUBAN_42_9, LUBAN_38_8];
 
 const MEASUREMENT_TARGETS = [
   { id: 'door', label: 'Cửa đi / Cửa sổ / Cổng', rulerTarget: 522 },
+  { id: 'solid', label: 'Bệ bếp / Bậc thềm / Khối xây đặc', rulerTarget: 460.8 },
   { id: 'stair', label: 'Bậc thang / Bếp / Khối xây', rulerTarget: 429 },
   { id: 'furniture', label: 'Tủ / Bàn ghế', rulerTarget: 429 },
   { id: 'altar', label: 'Bàn thờ / Tủ thờ', rulerTarget: 388 },
@@ -63,6 +80,7 @@ const MEASUREMENT_TARGETS = [
 
 const QUICK_PRESETS = {
   522: [810, 1080, 1260, 1460, 1530, 1760, 2120],
+  460.8: [460, 690, 810, 920, 1150, 1380, 1840],
   429: [460, 610, 680, 810, 880, 1080, 1330],
   388: [610, 690, 810, 890, 1070, 1270, 1530]
 };
