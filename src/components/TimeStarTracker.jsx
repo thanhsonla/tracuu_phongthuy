@@ -453,22 +453,49 @@ const MiniCalendar = ({ selectedDateStr, onSelect }) => {
 
 // --- Bảng Widget Real-time Hôm nay ---
 const TodayWidget = ({ projectContext }) => {
+  const [selectedDate, setSelectedDate] = useState('');
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
+    if (selectedDate !== '') return;
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [selectedDate]);
+
+  const displayDate = selectedDate ? new Date(`${selectedDate}T12:00:00`) : now;
 
   const data = useMemo(() => {
-    const checkDate = new Date(now);
+    const checkDate = new Date(displayDate);
     checkDate.setHours(12, 0, 0, 0); 
     return getTimeStars(checkDate);
-  }, [getLocalYMD(now)]);
+  }, [getLocalYMD(displayDate)]);
 
   return (
     <div className="animate-fade-in animate-slide-in-right w-full mb-4">
-       <TrackerResultCard dateObj={now} currentTime={now} data={data} projectContext={projectContext} />
+       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 bg-slate-800/60 p-3 rounded-2xl border border-slate-700 shadow-sm">
+          <span className="text-slate-300 font-bold text-sm ml-1 flex items-center gap-2">
+            <CalendarDays size={18} className="text-amber-400" /> Bảng Tra Cứu Nhật Cát (Chọn Ngày Khác):
+          </span>
+          <div className="flex items-center gap-2">
+            {selectedDate !== '' && (
+               <button onClick={() => setSelectedDate('')} className="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-2 rounded-xl transition-colors font-bold shadow-sm whitespace-nowrap">
+                 Trở Về Hôm Nay
+               </button>
+            )}
+            <input 
+              type="date" 
+              value={selectedDate || getLocalYMD(now)}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="bg-slate-900 border border-slate-600 text-white font-bold px-3 py-2 rounded-xl text-sm outline-none focus:border-amber-500 shadow-inner w-full sm:w-auto"
+            />
+          </div>
+       </div>
+       <TrackerResultCard 
+         dateObj={displayDate} 
+         currentTime={selectedDate === '' ? now : null} 
+         data={data} 
+         projectContext={projectContext} 
+       />
     </div>
   );
 };
